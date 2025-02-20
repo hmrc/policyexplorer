@@ -1,0 +1,2 @@
+class RequestContextItemNotFoundException(Exception):
+    pass
