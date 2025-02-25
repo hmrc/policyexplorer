@@ -1,31 +1,35 @@
-from enum import StrEnum
-from typing import Any, Dict
+from copy import deepcopy
+from pprint import pprint
+from typing import Any, Dict, List
 
 from policyexplorer.common import ensure_array, matches_pattern
 from policyexplorer.condition import Condition
+from policyexplorer.effect import Effect
 from policyexplorer.exception import RequestContextItemNotFoundException
+from policyexplorer.permission import PermissionEffect
+from policyexplorer.permission_table import PermissionTable
+from policyexplorer.principal import Principal
 from policyexplorer.request_context import RequestContext
 
-class Effect(StrEnum):
-    ALLOW = "Allow"
-    DENY = "Deny"
 
 class Statement:
 
-    def __init__(self, statement: Dict[str, Any]) -> None:
-        self._statement = statement
+    def __init__(self, raw: Dict[str, Any]) -> None:
+        self._statement = raw
         self.effect = self._effect()
         self.principal = self._principal()
         self.action = self._action()
         self.resource = self._resource()
         self.condition = self._condition()
-        self._statement_table = self.statement_table()
+        self.permission_table = self._permission_table()
 
     def _effect(self) -> str:
         return self._statement.get("Effect")
 
-    def _principal(self) -> str:
-        return ensure_array(self._statement.get("Principal"))
+    def _principal(self) -> List[Principal]:
+        principals = ensure_array(self._statement.get("Principal"))
+        return [Principal(identifier=p, excludes=[], only=[]) for p in principals]
+         
 
     def _action(self) -> str:
         return ensure_array(self._statement.get("Action"))
@@ -34,96 +38,60 @@ class Statement:
         return ensure_array(self._statement.get("Resource"))
 
     def _condition(self) -> Condition:
-        return Condition(condition=self._statement.get("Condition", {}))
+        return Condition(raw=self._statement.get("Condition", {}))
+
+    def _inverse_effect(self) -> str:
+        return {
+            Effect.ALLOW: Effect.DENY,
+            Effect.DENY: Effect.ALLOW,
+        }[self.effect]
+
+    # TODO:
+    #   Add support for:
+    #       * NotAction 
+    #       * 'Principal: { AWS: "*"}' format 
+    #   Question: Can 'Principal' field have multiple principal types e.g. AWS, Service?
 
     # consider other elements of IAM Policy statement:
     #   * NotPrincipal
     #   * NotAction
     #   * NotResource
 
-
-    def statement_table(self) -> Dict[str, Any]:
-        # Given a statement:
-        # dict(
-        #     Effect="Allow",
-        #     Principal=["P1", "P2"],
-        #     Action=["A1", "A2"],
-        #     Resource=["R1", "R2"],
-        # )
-        #
-        # Graph: No of paths = len(Principal) x len(Action) x len(Resource) => with special rule for wildcards
-        #   P1-A1-R1
-        #   P1-A2-R1
-        #   P1-A1-R2
-        #   P1-A2-R2
-        #   P2-A1-R1
-        #   P2-A2-R1
-        #   P2-A1-R2
-        #   P2-A2-R2
-        
-        # How do you compare an ARN against a wildcard ARN?
-
-        # table = {
-        #     "P1": {
-        #         "A1-R1": "R1",
-        #         "A1-R2": "R2",
-        #         "A2-R1": "R1",
-        #         "A2-R2": "R2",
-        #     },
-        #     "P2": {
-        #         "A1-R1": "R1",
-        #         "A1-R2": "R2",
-        #         "A2-R1": "R1",
-        #         "A2-R2": "R2",
-        #     },
-        # }
-
+    def _permission_table(self) -> PermissionTable:
         table = {}
 
+        _principals = [] # From statement Principal element, generate fully formed Principal object (i.e. excludes/only field fully populated) to be used as keys in the table
+
         for p in self.principal:
+            if self.condition:
+                for condition_item in self.condition.items:
+                    for cp in condition_item.get_principals():
+                        # might there be a need to validate if cp is a subset of p?
+                        if condition_item.is_operator_negated():
+                            p.excludes.append(cp)
+                        else:
+                            p.only.append(cp)
+            _principals.append(p)
+
+        for p in _principals:
             if not table.get(p):
                 table[p] = {}
             
             for a in self.action:
                 for r in self.resource:
                     action_resource_key = f"{a}-{r}"
-                    table[p][action_resource_key] = r
-
-        return table
-
-    # build statement_table
-    # is_matched_by_statement_table(rc) ==> principal, action, resource
-    # is_matched_by_condition(rc)
-
-    def is_matched_by_statement_table(self, request_context: RequestContext) -> bool:
-
-        # Assumption: the following request context keys are assumed
-
-        principal = request_context.get_item_by_key("aws:PrincipalArn") # Consider service ARN too?
-        if not principal:
-            raise RequestContextItemNotFoundException("request context item not found - aws:PrincipalArn")
-
-        action = request_context.get_item_by_key("Action")
-        if not action:
-            raise RequestContextItemNotFoundException("request context item not found - Action")
-
-        resource = request_context.get_item_by_key("Resource")
-        if not resource:
-            raise RequestContextItemNotFoundException("request context item not found - Resource")
-
-
-        action_resource_key = f"{action.value}-{resource.value}"
-
-        for pk in self._statement_table.keys():
-            if matches_pattern(pattern=pk, string=principal.value):
-                for ark in self._statement_table[pk].keys():
-                    if matches_pattern(pattern=ark, string=action_resource_key):
-                        return True
-
-        return False
-
-    def is_matched_by_condition(self, request_context: RequestContext) -> bool:
-        return self.condition.evaluate(request_context=request_context)
+                    table[p][action_resource_key] = PermissionEffect[self.effect.upper()]
+                    if self.condition:
+                        for condition_item in self.condition.items:
+                            for cp in condition_item.get_principals():
+                                if not table.get(cp):
+                                    table[cp] = {}
+                                if condition_item.is_operator_negated():
+                                    table[cp][action_resource_key] = PermissionEffect[self.effect.upper()].invert
+                                else:
+                                    table[cp][action_resource_key] = PermissionEffect[self.effect.upper()]
+                            
+        return PermissionTable(table=table)
 
     # Statement Evaluation Grid
     #
@@ -142,11 +110,17 @@ class Statement:
         result = Effect.DENY
 
         if self.effect == Effect.ALLOW:
-            if self.is_matched_by_statement_table(request_context=request_context) and self.is_matched_by_condition(request_context=request_context):
+            if self.permission_table.match(request_context=request_context) and self.condition.match(request_context=request_context):
                 result = Effect.ALLOW
 
         if self.effect == Effect.DENY:
-            if self.is_matched_by_statement_table(request_context=request_context) and not self.is_matched_by_condition(request_context=request_context):
+            if self.permission_table.match(request_context=request_context) and not self.condition.match(request_context=request_context):
                 result = Effect.ALLOW
 
         return result
+
+    def matches_action(self, action: str) -> bool:
+        return any([matches_pattern(pattern=a, string=action) for a in self.action])
+
+    def matches_principal(self, principal: str) -> bool:
+        return any([matches_pattern(pattern=p, string=principal) for p in self.principal])

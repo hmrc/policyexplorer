@@ -1,7 +1,9 @@
 from dataclasses import dataclass
+import re
 from typing import Any, Dict, List
 
 from policyexplorer.common import ensure_array, matches_pattern
+from policyexplorer.principal import Principal
 from policyexplorer.request_context import RequestContext
 
 
@@ -23,7 +25,6 @@ class ConditionItem:
         # ToDo: consider ForAnyValue and ForAllValue qualifiers, as well as IfExists
 
         request_context_item = request_context.get_item_by_key(self.key)
-
         if not request_context_item:
             return False
 
@@ -32,18 +33,27 @@ class ConditionItem:
         else:
             result = any([matches_pattern(pattern=v, string=request_context_item.value) for v in self.value])
 
-        # breakpoint()
-
         if self.is_operator_negated():
             return not result
 
         return result
 
+    def get_principals(self) -> List[Principal]:
+        properties_of_principal = ["aws:PrincipalArn", "aws:userid", "aws:username"]
+        pattern = f"({'|'.join(properties_of_principal)})$"
+        regex = re.compile(pattern, re.IGNORECASE)
+        
+        principals = []
+        if regex.match(self.key):
+            principals = [Principal(identifier=v, excludes=[], only=[]) for v in self.value]
+
+        return principals
+
 
 class Condition:
 
-    def __init__(self, condition: Dict[str, Any]) -> None:
-        self._condition = condition
+    def __init__(self, raw: Dict[str, Any]) -> None:
+        self._condition = raw
         self.items = self._items()
 
     def _items(self) -> List[ConditionItem]:
@@ -59,5 +69,11 @@ class Condition:
     def evaluate(self, request_context: RequestContext) -> bool:
         return all([condition_item.evaluate(request_context=request_context) for condition_item in self.items])
 
+    def match(self, request_context: RequestContext) -> bool:
+        return self.evaluate(request_context=request_context)
 
-    # based on the evaluate() return value how do you determine whos allowed? consider negated conditions
+    def get_principals(self) -> List[Principal]:
+        principals = []
+        for condition_item in self.items:
+            principals += condition_item.get_principals()
+        return principals

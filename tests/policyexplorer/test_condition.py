@@ -2,6 +2,7 @@ from typing import Any, Dict, List
 import pytest
 
 from policyexplorer.condition import Condition, ConditionItem
+from policyexplorer.principal import Principal
 from policyexplorer.request_context import RequestContext, RequestContextItem
 
 @pytest.mark.parametrize(
@@ -58,7 +59,7 @@ from policyexplorer.request_context import RequestContext, RequestContextItem
     ]
 )
 def test_condition_parsing(condition: Dict[str, Any], condition_items: List[ConditionItem]) -> None:
-    assert Condition(condition=condition).items == condition_items
+    assert Condition(raw=condition).items == condition_items
 
 
 
@@ -125,7 +126,7 @@ def test_evaluate_condition_item(condition_item: ConditionItem, request_context:
     [
         (
             Condition(
-                condition={
+                raw={
                     "ArnLike": {"aws:PrincipalArn": "arn:aws:iam:*:123456789012:role/*Role*"},
                 }
             ),
@@ -138,7 +139,7 @@ def test_evaluate_condition_item(condition_item: ConditionItem, request_context:
         ),
         (
             Condition(
-                condition={
+                raw={
                     "ArnNotLike": {"aws:PrincipalArn": "arn:aws:iam:*:123456789012:role/*Role*"},
                 }
             ),
@@ -151,7 +152,7 @@ def test_evaluate_condition_item(condition_item: ConditionItem, request_context:
         ),
         (
             Condition(
-                condition={
+                raw={
                     "ArnLike": {"aws:PrincipalArn": "arn:aws:iam:*:123456789012:role/*Role*"},
                 }
             ),
@@ -164,7 +165,7 @@ def test_evaluate_condition_item(condition_item: ConditionItem, request_context:
         ),
         (
             Condition(
-                condition={
+                raw={
                     "ArnLike": {"aws:PrincipalArn": "arn:aws:iam:*:123456789012:role/*Role*"},
                     "Bool": {"aws:MultiFactorAuthPresent": True},
                 }
@@ -181,3 +182,37 @@ def test_evaluate_condition_item(condition_item: ConditionItem, request_context:
 )
 def test_evaluate_condition(condition: Condition, request_context: RequestContext, expected: bool) -> None:
     assert condition.evaluate(request_context=request_context) == expected
+
+
+@pytest.mark.parametrize(
+    "condition_item,principals",
+    [
+        (
+            ConditionItem(operator="ArnLike", key="aws:PrincipalArn", value=["arn:aws:iam:*:123456789012:role/*Role*"]),
+            [Principal("arn:aws:iam:*:123456789012:role/*Role*", excludes=[], only=[])]
+        ),
+        (
+            ConditionItem(operator="ArnNotLike", key="aws:PrincipalArn", value=["arn:aws:iam:us-east-1:123456789012:role/RoleAdmin"]),
+            [Principal(identifier="arn:aws:iam:us-east-1:123456789012:role/RoleAdmin", excludes=[], only=[])]
+        ),
+        (
+            ConditionItem(operator="StringLike", key="aws:username", value=["john.doe", "jane.smith"]),
+            [Principal("john.doe", excludes=[], only=[]), Principal("jane.smith", excludes=[], only=[])]
+        ),
+        (
+            ConditionItem(operator="StringNotLike", key="aws:userid", value=["id-john.doe"]),
+            [Principal(identifier="id-john.doe", excludes=[], only=[])]
+        ),
+        (
+            ConditionItem(operator="Bool", key="aws:MultiFactorAuthPresent", value=True),
+            []
+        ),
+        (
+            ConditionItem(operator="IpAddress", key="aws:SourceIp", value=["203.0.113.0/24"]),
+            []
+        ),
+    ]
+)
+def test_condition_item_get_principals(condition_item: ConditionItem, principals: List[str]) -> None:
+    assert condition_item.get_principals() == principals
+    

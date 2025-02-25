@@ -10,7 +10,7 @@ def ensure_array(element: str|List[str]) -> List[str]:
 
 
 def pattern_to_regex(wildcard: str) -> str:
-    # need to handle "?" too esp when there are more than 1 "?"
+    # TODO: need to handle "?" too esp when there are more than 1 "?"
     return ".*".join(wildcard.split("*")) + "$"
 
 def matches_pattern(pattern: str, string: str) -> bool:
@@ -21,4 +21,4 @@ def matches_pattern(pattern: str, string: str) -> bool:
     # P*X, P1XA = False
     # P*X*, P1XA = True
 
-    return re.search(pattern_to_regex(pattern), string) is not None
+    return re.fullmatch(pattern_to_regex(pattern), string) is not None

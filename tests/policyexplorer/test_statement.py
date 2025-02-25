@@ -1,9 +1,14 @@
+from pprint import pprint
 from typing import Any, Dict, List, NamedTuple, Tuple
 import pytest
 
 from policyexplorer.condition import Condition
+from policyexplorer.effect import Effect
 from policyexplorer.exception import RequestContextItemNotFoundException
-from policyexplorer.statement import Effect, Statement
+from policyexplorer.permission import PermissionEffect
+from policyexplorer.permission_table import PermissionTable
+from policyexplorer.principal import Principal
+from policyexplorer.statement import Statement
 from policyexplorer.request_context import RequestContext, RequestContextItem
 
 StatementTuple = NamedTuple("StatementTuple", [("effect", str), ("principal", List[str]), ("action", List[str]), ("resource", List[str]), ("condition", Condition)])
@@ -20,10 +25,10 @@ StatementTuple = NamedTuple("StatementTuple", [("effect", str), ("principal", Li
             ),
             StatementTuple(
                 effect="Allow",
-                principal=["*"],
+                principal=[Principal("*", [], [])],
                 action=["*:*"],
                 resource=["*"],
-                condition=Condition(condition={}),
+                condition=Condition(raw={}),
             )
         ),
         (
@@ -35,10 +40,10 @@ StatementTuple = NamedTuple("StatementTuple", [("effect", str), ("principal", Li
             ),
             StatementTuple(
                 effect="Allow",
-                principal=["arn:aws:iam::123456789012:role/RoleAdmin"],
+                principal=[Principal("arn:aws:iam::123456789012:role/RoleAdmin", [], [])],
                 action=["*:*"],
                 resource=["*"],
-                condition=Condition(condition={}),
+                condition=Condition(raw={}),
             )
         ),
         (
@@ -50,10 +55,10 @@ StatementTuple = NamedTuple("StatementTuple", [("effect", str), ("principal", Li
             ),
             StatementTuple(
                 effect="Allow",
-                principal=["arn:aws:iam::123456789012:role/RoleAdmin"],
+                principal=[Principal("arn:aws:iam::123456789012:role/RoleAdmin", [], [])],
                 action=["ec2:*", "s3:*"],
                 resource=["*"],
-                condition=Condition(condition={}),
+                condition=Condition(raw={}),
             )
         ),
         (
@@ -65,10 +70,10 @@ StatementTuple = NamedTuple("StatementTuple", [("effect", str), ("principal", Li
             ),
             StatementTuple(
                 effect="Allow",
-                principal=["*"],
+                principal=[Principal("*", [], [])],
                 action=["s3:DeleteBucket"],
                 resource=["arn:aws:s3:::bucketA", "arn:aws:s3:::bucketB"],
-                condition=Condition(condition={}),
+                condition=Condition(raw={}),
             )
         ),
         (
@@ -85,10 +90,10 @@ StatementTuple = NamedTuple("StatementTuple", [("effect", str), ("principal", Li
             ),
             StatementTuple(
                 effect="Deny",
-                principal=["*"],
+                principal=[Principal("*", [Principal("arn:aws:iam::123456789012:role/RoleAdmin", [], [])], [])],
                 action=["kms:ScheduleKeyDeletion"],
                 resource=["*"],
-                condition=Condition(condition={ 
+                condition=Condition(raw={ 
                     "StringNotEquals": { "aws:PrincipalArn": "arn:aws:iam::123456789012:role/RoleAdmin" }
                 })
             )
@@ -105,16 +110,16 @@ StatementTuple = NamedTuple("StatementTuple", [("effect", str), ("principal", Li
             ),
             StatementTuple(
                 effect="Deny",
-                principal=["*"],
+                principal=[Principal("*", [], [])],
                 action=["iam:*AccessKey*"],
                 resource=["arn:aws:iam::account-id:user/*"],
-                condition=Condition(condition={ "NotIpAddress": {"aws:SourceIp": "203.0.113.0/24"} })
+                condition=Condition(raw={ "NotIpAddress": {"aws:SourceIp": "203.0.113.0/24"} })
             )
         ),
     ]
 )
 def test_statement_parsing(statement: Dict[str, Any], statement_tuple: StatementTuple) -> None:
-    st = Statement(statement=statement)
+    st = Statement(raw=statement)
 
     assert st.effect == statement_tuple.effect
     assert st.principal == statement_tuple.principal
@@ -124,30 +129,8 @@ def test_statement_parsing(statement: Dict[str, Any], statement_tuple: Statement
 
 
 @pytest.mark.parametrize(
-    "statement,statement_table",
+    "statement,permission_table",
     [
-        (
-            dict(
-                Effect="Allow",
-                Principal=["P1", "P2"],
-                Action=["A1", "A2"],
-                Resource=["R1", "R2"],
-            ),
-            {
-                "P1": {
-                    "A1-R1": "R1",
-                    "A1-R2": "R2",
-                    "A2-R1": "R1",
-                    "A2-R2": "R2",
-                },
-                "P2": {
-                    "A1-R1": "R1",
-                    "A1-R2": "R2",
-                    "A2-R1": "R1",
-                    "A2-R2": "R2",
-                },
-            }
-        ),
         (
             dict(
                 Effect='Allow',
@@ -155,11 +138,27 @@ def test_statement_parsing(statement: Dict[str, Any], statement_tuple: Statement
                 Action="*:*",
                 Resource='*',
             ),
-            {
-                "*": {
-                    "*:*-*": "*"
+            PermissionTable(
+                table={
+                    Principal("*", [], []): {"*:*-*": PermissionEffect.ALLOW}
                 }
-            }
+            ),
+        ),
+        (
+            dict(
+                Effect='Allow',
+                Principal='arn:aws:iam::123456789012:role/RoleAdmin',
+                Action=["ec2:*", "s3:*"],
+                Resource='*',
+            ), 
+            PermissionTable(
+                table={
+                    Principal("arn:aws:iam::123456789012:role/RoleAdmin", [], []): {
+                        "ec2:*-*": PermissionEffect.ALLOW,
+                        "s3:*-*": PermissionEffect.ALLOW,
+                    }
+                }
+            ),
         ),
         (
             dict(
@@ -168,25 +167,11 @@ def test_statement_parsing(statement: Dict[str, Any], statement_tuple: Statement
                 Action="*:*",
                 Resource='*',
             ),
-            {
-                "arn:aws:iam::123456789012:role/RoleAdmin": {
-                    "*:*-*": "*"
+            PermissionTable(
+                table={
+                    Principal("arn:aws:iam::123456789012:role/RoleAdmin", [], []): {"*:*-*": PermissionEffect.ALLOW}
                 }
-            }
-        ),
-        (
-            dict(
-                Effect='Allow',
-                Principal='arn:aws:iam::123456789012:role/RoleAdmin',
-                Action=["ec2:*", "s3:*"],
-                Resource='*',
             ),
-            {
-                "arn:aws:iam::123456789012:role/RoleAdmin": {
-                    "ec2:*-*": "*",
-                    "s3:*-*": "*",
-                }
-            }
         ),
         (
             dict(
@@ -195,222 +180,133 @@ def test_statement_parsing(statement: Dict[str, Any], statement_tuple: Statement
                 Action="s3:DeleteBucket",
                 Resource=["arn:aws:s3:::bucketA", "arn:aws:s3:::bucketB"],
             ),
-            {
-                "*": {
-                    "s3:DeleteBucket-arn:aws:s3:::bucketA": "arn:aws:s3:::bucketA",
-                    "s3:DeleteBucket-arn:aws:s3:::bucketB": "arn:aws:s3:::bucketB",
+            PermissionTable(
+                table={
+                    Principal("*", [], []): {
+                        "s3:DeleteBucket-arn:aws:s3:::bucketA": PermissionEffect.ALLOW,
+                        "s3:DeleteBucket-arn:aws:s3:::bucketB": PermissionEffect.ALLOW,
+                    }
                 }
-            }
+            ),
+        ),
+        (
+            dict(
+                Effect='Allow',
+                Principal='*',
+                Action="kms:*",
+                Resource='*',
+                Condition={
+                    "StringNotLike": {
+                        "aws:PrincipalArn": "arn:aws:iam::123456789012:role/RoleAdmin"
+                    }
+                }
+            ),
+            PermissionTable(
+                table={
+                    Principal(identifier="*", excludes=[Principal("arn:aws:iam::123456789012:role/RoleAdmin", [], [])], only=[]): {"kms:*-*": PermissionEffect.ALLOW.value},
+                    Principal("arn:aws:iam::123456789012:role/RoleAdmin", [], []): {"kms:*-*": PermissionEffect.IMPLICIT_DENY.value},
+                }
+            ),
         ),
         (
             dict(
                 Effect='Deny',
-                Principal=["arn:aws:iam::123456789012:user/Bob", "arn:aws:iam::123456789012:user/Jane", ],
-                Action=["s3:DeleteBucket", "s3:PutBucketPolicy"],
-                Resource=["arn:aws:s3:::bucketA", "arn:aws:s3:::bucketB"]
-            ),
-            {
-                "arn:aws:iam::123456789012:user/Bob": {
-                    "s3:DeleteBucket-arn:aws:s3:::bucketA": "arn:aws:s3:::bucketA",
-                    "s3:DeleteBucket-arn:aws:s3:::bucketB": "arn:aws:s3:::bucketB",
-                    "s3:PutBucketPolicy-arn:aws:s3:::bucketA": "arn:aws:s3:::bucketA",
-                    "s3:PutBucketPolicy-arn:aws:s3:::bucketB": "arn:aws:s3:::bucketB",
-                },
-                "arn:aws:iam::123456789012:user/Jane": {
-                    "s3:DeleteBucket-arn:aws:s3:::bucketA": "arn:aws:s3:::bucketA",
-                    "s3:DeleteBucket-arn:aws:s3:::bucketB": "arn:aws:s3:::bucketB",
-                    "s3:PutBucketPolicy-arn:aws:s3:::bucketA": "arn:aws:s3:::bucketA",
-                    "s3:PutBucketPolicy-arn:aws:s3:::bucketB": "arn:aws:s3:::bucketB",
-                }
-            }
-        ),
-    ]
-)
-def test_statement_table(statement: Dict[str, Any], statement_table: Dict[str, Any]) -> None:
-    st = Statement(statement=statement)
-    assert st.statement_table() == statement_table
-
-
-@pytest.mark.parametrize(
-    "statement,request_context,expected",
-    [
-        (
-            dict(
-                Effect="Allow",
-                Principal=["P1", "P2"],
-                Action=["A1", "A2"],
-                Resource=["R1", "R2"],
-            ),
-            RequestContext(
-                items={
-                    "aws:PrincipalArn": RequestContextItem(key="aws:PrincipalArn", value="P1"),
-                    "Action": RequestContextItem(key="Action", value="A1"),
-                    "Resource": RequestContextItem(key="Resource", value="R1"),
-                }
-            ),
-            True
-        ),
-        (
-            dict(
-                Effect="Allow",
-                Principal=["P1", "P2"],
-                Action=["A1", "A2"],
-                Resource=["R1", "R2"],
-            ),
-            RequestContext(
-                items={
-                    "aws:PrincipalArn": RequestContextItem(key="aws:PrincipalArn", value="P2"),
-                    "Action": RequestContextItem(key="Action", value="A1"),
-                    "Resource": RequestContextItem(key="Resource", value="R2"),
-                }
-            ),
-            True
-        ),
-        (
-            dict(
-                Effect="Allow",
-                Principal=["P1", "P2"],
-                Action=["A1", "A2"],
-                Resource=["R1", "R2"],
-            ),
-            RequestContext(
-                items={
-                    "aws:PrincipalArn": RequestContextItem(key="aws:PrincipalArn", value="PX"),
-                    "Action": RequestContextItem(key="Action", value="A1"),
-                    "Resource": RequestContextItem(key="Resource", value="R1"),
-                }
-            ),
-            False
-        ),
-        (
-            dict(
-                Effect="Allow",
-                Principal=["P1", "P2"],
-                Action=["A1", "A2"],
-                Resource=["R1", "R2"],
-            ),
-            RequestContext(
-                items={
-                    "aws:PrincipalArn": RequestContextItem(key="aws:PrincipalArn", value="P2"),
-                    "Action": RequestContextItem(key="Action", value="A1"),
-                    "Resource": RequestContextItem(key="Resource", value="RX"),
-                }
-            ),
-            False
-        ),
-        (
-            dict(
-                Effect='Allow',
                 Principal='*',
-                Action="*:*",
+                Action="ec2:*",
                 Resource='*',
-            ),
-            RequestContext(
-                items={
-                    "aws:PrincipalArn": RequestContextItem(key="aws:PrincipalArn", value="arn:aws:iam::123456789012:role/RoleAdmin"),
-                    "Action": RequestContextItem(key="Action", value="s3:CreateBucket"),
-                    "Resource": RequestContextItem(key="Resource", value="arn:aws:s3:::bucketA"),
+                Condition={
+                    "StringNotLike": {
+                        "aws:PrincipalArn": "arn:aws:iam::123456789012:role/RoleAdmin"
+                    }
                 }
             ),
-            True
-        ),
-        (
-            dict(
-                Effect='Allow',
-                Principal='arn:aws:iam::123456789012:role/RoleAdmin',
-                Action=["ec2:*", "s3:*"],
-                Resource="arn:aws:ec2:eu-west-2:123456789012:instance/*",
-            ),
-            RequestContext(
-                items={
-                    "aws:PrincipalArn": RequestContextItem(key="aws:PrincipalArn", value="arn:aws:iam::123456789012:role/RoleAdmin"),
-                    "Action": RequestContextItem(key="Action", value="ec2:RunInstances"),
-                    "Resource": RequestContextItem(key="Resource", value="arn:aws:ec2:eu-west-2:123456789012:instance/i-5203422c"),
+            PermissionTable(
+                table={
+                    Principal(identifier="*", excludes=[Principal("arn:aws:iam::123456789012:role/RoleAdmin", [], [])], only=[]): {"ec2:*-*": PermissionEffect.DENY},
+                    Principal("arn:aws:iam::123456789012:role/RoleAdmin", [], []): {"ec2:*-*": PermissionEffect.IMPLICIT_DENY},
                 }
             ),
-            True
         ),
         (
             dict(
                 Effect='Deny',
-                Principal='arn:aws:iam::123456789012:role/RoleEngineer',
-                Action=["ec2:*", "s3:*"],
-                Resource="*",
-            ),
-            RequestContext(
-                items={
-                    "aws:PrincipalArn": RequestContextItem(key="aws:PrincipalArn", value="arn:aws:iam::123456789012:role/RoleEngineer"),
-                    "Action": RequestContextItem(key="Action", value="s3:DeleteBucket"),
-                    "Resource": RequestContextItem(key="Resource", value="arn:aws:s3:::bucketA"),
+                Principal='*',
+                Action="ec2:*",
+                Resource='*',
+                Condition={
+                    "StringLike": {
+                        "aws:PrincipalArn": "arn:aws:iam::123456789012:role/RoleEngineer"
+                    }
                 }
             ),
-            True
+            PermissionTable(
+                table={
+                    Principal(identifier="*", excludes=[], only=[Principal("arn:aws:iam::123456789012:role/RoleEngineer", [], [])]): {"ec2:*-*": PermissionEffect.DENY},
+                    Principal("arn:aws:iam::123456789012:role/RoleEngineer", [], []): {"ec2:*-*": PermissionEffect.DENY},
+                }
+            ),
+        ),
+        (
+            dict(
+                Effect='Deny',
+                Principal='*',
+                Action="kms:ScheduleKeyDeletion",
+                Resource='*',
+                Condition={
+                    "StringNotLike": {
+                        "aws:PrincipalArn": "arn:aws:iam::123456789012:role/RoleEngineer"
+                    }
+                }
+            ),
+            PermissionTable(
+                table={
+                    Principal(identifier="*", excludes=[Principal("arn:aws:iam::123456789012:role/RoleEngineer", [], [])], only=[]): {
+                        "kms:ScheduleKeyDeletion-*": PermissionEffect.DENY
+                    },
+                    Principal("arn:aws:iam::123456789012:role/RoleEngineer", [], []): {"kms:ScheduleKeyDeletion-*": PermissionEffect.IMPLICIT_DENY},
+                }
+            ),
+        ),
+        (
+            dict(
+                Effect='Deny',
+                Principal='*',
+                Action=["s3:PutObject*", "s3:ListMultipartUploadParts", "s3:DeleteObject*"],
+                Resource=["arn:aws:s3:::bucketA", "arn:aws:s3:::bucketB"],
+                Condition={
+                    "ArnNotLike": {"aws:PrincipalArn": ["arn:aws:iam::123456789012:role/RoleAdmin"]},
+                    "Bool": {"aws:SecureTransport": False},
+                }
+            ),
+            PermissionTable(
+                table={
+                    Principal(identifier="*", excludes=[Principal("arn:aws:iam::123456789012:role/RoleAdmin", [], [])], only=[]): {
+                        "s3:PutObject*-arn:aws:s3:::bucketA": PermissionEffect.DENY,
+                        "s3:ListMultipartUploadParts-arn:aws:s3:::bucketA": PermissionEffect.DENY,
+                        "s3:DeleteObject*-arn:aws:s3:::bucketA": PermissionEffect.DENY,
+                        "s3:PutObject*-arn:aws:s3:::bucketB": PermissionEffect.DENY,
+                        "s3:ListMultipartUploadParts-arn:aws:s3:::bucketB": PermissionEffect.DENY,
+                        "s3:DeleteObject*-arn:aws:s3:::bucketB": PermissionEffect.DENY,
+                    },
+                    Principal("arn:aws:iam::123456789012:role/RoleAdmin", [], []): {
+                        "s3:PutObject*-arn:aws:s3:::bucketA": PermissionEffect.IMPLICIT_DENY,
+                        "s3:ListMultipartUploadParts-arn:aws:s3:::bucketA": PermissionEffect.IMPLICIT_DENY,
+                        "s3:DeleteObject*-arn:aws:s3:::bucketA": PermissionEffect.IMPLICIT_DENY,
+                        "s3:PutObject*-arn:aws:s3:::bucketB": PermissionEffect.IMPLICIT_DENY,
+                        "s3:ListMultipartUploadParts-arn:aws:s3:::bucketB": PermissionEffect.IMPLICIT_DENY,
+                        "s3:DeleteObject*-arn:aws:s3:::bucketB": PermissionEffect.IMPLICIT_DENY,
+                    },
+                }
+            ),
         ),
     ]
 )
-def test_is_matched_by_statement_table(statement: Dict[str, Any], request_context: RequestContext, expected: bool) -> None:
-    st = Statement(statement=statement)
-    assert st.is_matched_by_statement_table(request_context=request_context) == expected
+def test_statement_permission_table(statement: Dict[str, Any], permission_table: PermissionTable) -> None:
+    st = Statement(raw=statement)
+    assert st.permission_table == permission_table
 
 
-@pytest.mark.parametrize(
-    "statement,request_context,context_key",
-    [
-        (
-            dict(
-                Effect='Allow',
-                Principal='*',
-                Action="*:*",
-                Resource='*',
-            ),
-            RequestContext(
-                items={
-                    "Action": RequestContextItem(key="Action", value="s3:CreateBucket"),
-                    "Resource": RequestContextItem(key="Resource", value="arn:aws:s3:::bucketA"),
-                }
-            ),
-            "aws:PrincipalArn",
-        ),
-        (
-            dict(
-                Effect='Allow',
-                Principal='*',
-                Action="*:*",
-                Resource='*',
-            ),
-            RequestContext(
-                items={
-                    "aws:PrincipalArn": RequestContextItem(key="aws:PrincipalArn", value="arn:aws:iam::123456789012:role/RoleEngineer"),
-                    "Resource": RequestContextItem(key="Resource", value="arn:aws:s3:::bucketA"),
-                }
-            ),
-            "Action",
-        ),
-        (
-            dict(
-                Effect='Allow',
-                Principal='*',
-                Action="*:*",
-                Resource='*',
-            ),
-            RequestContext(
-                items={
-                    "aws:PrincipalArn": RequestContextItem(key="aws:PrincipalArn", value="arn:aws:iam::123456789012:role/RoleEngineer"),
-                    "Action": RequestContextItem(key="Action", value="s3:CreateBucket"),
-                }
-            ),
-            "Resource",
-        ),
-    ]
-)
-def test_is_matched_by_statement_table_missing_request_context_item(statement: Dict[str, Any], request_context: RequestContext, context_key: str) -> None:
-    st = Statement(statement=statement)
-    with pytest.raises(RequestContextItemNotFoundException, match=f"request context item not found - {context_key}"):
-        st.is_matched_by_statement_table(request_context=request_context)
-
-
-
-# effect    | is_matched_by_statement_table | is_matched_by_condition | Result
+# effect    | is_matched_by_permission_table | is_matched_by_condition | Result
 # ------    | ----------------------------- | ----------------------- | ------
 # 0 (Allow) | 0 (False)                     | 0 (False)               | Deny
 # 0 (Allow) | 0 (False)                     | 1 (True)                | Deny
@@ -424,7 +320,7 @@ def test_is_matched_by_statement_table_missing_request_context_item(statement: D
 @pytest.mark.parametrize(
     "statement,request_context,expected",
     [
-        # effect | is_matched_by_statement_table | is_matched_by_condition | Result
+        # effect | is_matched_by_permission_table | is_matched_by_condition | Result
         # ------ | ----------------------------- | ----------------------- | ------
         # Allow  | True                          | True                    | ALLOW
         (
@@ -459,7 +355,7 @@ def test_is_matched_by_statement_table_missing_request_context_item(statement: D
             ),
             Effect.ALLOW,
         ),
-        # effect | is_matched_by_statement_table | is_matched_by_condition | Result
+        # effect | is_matched_by_permission_table | is_matched_by_condition | Result
         # ------ | ----------------------------- | ----------------------- | ------
         # Allow  | False                         | True                    | Deny
         (
@@ -494,7 +390,7 @@ def test_is_matched_by_statement_table_missing_request_context_item(statement: D
             ),
             Effect.DENY,
         ),
-        # effect | is_matched_by_statement_table | is_matched_by_condition | Result
+        # effect | is_matched_by_permission_table | is_matched_by_condition | Result
         # ------ | ----------------------------- | ----------------------- | ------
         # Allow  | True                          | False                   | Deny
         (
@@ -518,7 +414,7 @@ def test_is_matched_by_statement_table_missing_request_context_item(statement: D
             ),
             Effect.DENY,
         ),
-        # effect | is_matched_by_statement_table | is_matched_by_condition | Result
+        # effect | is_matched_by_permission_table | is_matched_by_condition | Result
         # ------ | ----------------------------- | ----------------------- | ------
         # Deny   | False                         | False                   | Deny (implicit)
         (
@@ -542,7 +438,7 @@ def test_is_matched_by_statement_table_missing_request_context_item(statement: D
             ),
             Effect.DENY,
         ),
-        # effect | is_matched_by_statement_table | is_matched_by_condition | Result
+        # effect | is_matched_by_permission_table | is_matched_by_condition | Result
         # ------ | ----------------------------- | ----------------------- | ------
         # Deny   | False                         | True                    | Deny (implicit)
         (
@@ -566,7 +462,7 @@ def test_is_matched_by_statement_table_missing_request_context_item(statement: D
             ),
             Effect.DENY,
         ),
-        # effect | is_matched_by_statement_table | is_matched_by_condition | Result
+        # effect | is_matched_by_permission_table | is_matched_by_condition | Result
         # ------ | ----------------------------- | ----------------------- | ------
         # Deny   | True                          | False                   | ALLOW
         (
@@ -611,7 +507,7 @@ def test_is_matched_by_statement_table_missing_request_context_item(statement: D
             ),
             Effect.ALLOW,
         ),
-        # effect | is_matched_by_statement_table | is_matched_by_condition | Result
+        # effect | is_matched_by_permission_table | is_matched_by_condition | Result
         # ------ | ----------------------------- | ----------------------- | ------
         # Deny   | True                          | True                    | Deny
         (
@@ -638,5 +534,6 @@ def test_is_matched_by_statement_table_missing_request_context_item(statement: D
     ]
 )
 def test_statement_evaluate(statement: Dict[str, Any], request_context: RequestContext, expected: str) -> None:
-    st = Statement(statement=statement)
+    st = Statement(raw=statement)
     assert st.evaluate(request_context=request_context) == expected
+
