@@ -1,6 +1,6 @@
 from typing import Any, Dict, List
 
-from policyexplorer.common import ensure_array, matches_pattern
+from policyexplorer.common import ensure_array
 from policyexplorer.condition import Condition
 from policyexplorer.effect import Effect
 from policyexplorer.permission import PermissionEffect
@@ -35,11 +35,11 @@ class Statement:
     def _condition(self) -> Condition:
         return Condition(raw=self._statement.get("Condition", {}))
 
-    def _inverse_effect(self) -> str:
-        return {
-            Effect.ALLOW: Effect.DENY,
-            Effect.DENY: Effect.ALLOW,
-        }[self.effect]
+    # def _inverse_effect(self) -> str:
+    #     return {
+    #         Effect.ALLOW: Effect.DENY,
+    #         Effect.DENY: Effect.ALLOW,
+    #     }[self.effect]
 
     # TODO:
     #   Add support for:
@@ -117,9 +117,3 @@ class Statement:
                 result = Effect.ALLOW
 
         return result
-
-    def matches_action(self, action: str) -> bool:
-        return any([matches_pattern(pattern=a, string=action) for a in self.action])
-
-    def matches_principal(self, principal: str) -> bool:
-        return any([matches_pattern(pattern=p, string=principal) for p in self.principal])

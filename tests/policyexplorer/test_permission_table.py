@@ -8,6 +8,37 @@ from policyexplorer.request_context import RequestContext, RequestContextItem
 
 
 @pytest.mark.parametrize(
+    "permission_table,other_table,expected",
+    [
+        (
+            PermissionTable(table={}),
+            PermissionTable(table={"*": {"*:*-*": PermissionEffect.ALLOW}}),
+            False,
+        ),
+        (
+            PermissionTable(table={"P1": {"A1-R1": PermissionEffect.ALLOW, "A2-R1": PermissionEffect.ALLOW}}),
+            PermissionTable(table={"P1": {"A1-R1": PermissionEffect.ALLOW, "A2-R1": PermissionEffect.ALLOW}}),
+            True,
+        ),
+        (
+            PermissionTable(table={"P1": {"A1-R1": PermissionEffect.ALLOW, "A2-R1": PermissionEffect.ALLOW}}),
+            PermissionTable(table={"P2": {"A1-R1": PermissionEffect.ALLOW, "A2-R1": PermissionEffect.ALLOW}}),
+            False,
+        ),
+        (
+            "",
+            PermissionTable(table={"P1": {"A1-R1": PermissionEffect.ALLOW}}),
+            False,
+        ),
+    ],
+)
+def test_permission_table_equality(
+    permission_table: PermissionTable, other_table: PermissionTable, expected: bool
+) -> None:
+    assert (permission_table == other_table) == expected
+
+
+@pytest.mark.parametrize(
     "perm_table,other_table,expected",
     [
         (

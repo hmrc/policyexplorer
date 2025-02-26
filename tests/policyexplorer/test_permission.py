@@ -1,6 +1,18 @@
 import pytest
 
-from policyexplorer.permission import PermissionEffect
+from policyexplorer.permission import Permission, PermissionEffect
+
+
+@pytest.mark.parametrize(
+    "permission_string,expected",
+    [
+        ("*:*-*", Permission(action="*:*", resource="*")),
+        ("ec2:*-*", Permission(action="ec2:*", resource="*")),
+        ("s3:GetBucketAcl-arn:aws:s3:::bucketA", Permission(action="s3:GetBucketAcl", resource="arn:aws:s3:::bucketA")),
+    ],
+)
+def test_permission_from_string(permission_string: str, expected: Permission) -> None:
+    assert Permission.from_string(permission_string=permission_string) == expected
 
 
 @pytest.mark.parametrize(

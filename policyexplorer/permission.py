@@ -1,5 +1,18 @@
+from dataclasses import dataclass
 from enum import StrEnum
+import re
 from typing import Dict
+
+
+@dataclass
+class Permission:
+    action: str
+    resource: str
+
+    @staticmethod
+    def from_string(permission_string: str) -> "Permission":
+        action, resource = re.match("(.*:.*)-(.*)", permission_string).groups()
+        return Permission(action=action, resource=resource)
 
 
 class PermissionEffect(StrEnum):
