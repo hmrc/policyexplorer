@@ -42,7 +42,7 @@ class ConditionItem:
         properties_of_principal = ["aws:PrincipalArn", "aws:userid", "aws:username"]
         pattern = f"({'|'.join(properties_of_principal)})$"
         regex = re.compile(pattern, re.IGNORECASE)
-        
+
         principals = []
         if regex.match(self.key):
             principals = [Principal(identifier=v, excludes=[], only=[]) for v in self.value]
@@ -51,7 +51,6 @@ class ConditionItem:
 
 
 class Condition:
-
     def __init__(self, raw: Dict[str, Any]) -> None:
         self._condition = raw
         self.items = self._items()

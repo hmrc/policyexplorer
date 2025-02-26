@@ -10,7 +10,4 @@ class Effect(StrEnum):
 
     @property
     def invert(self) -> str:
-        return {
-            "Allow": "Deny",
-            "Deny": "Allow"
-        }[self.effect]
+        return {"Allow": "Deny", "Deny": "Allow"}[self.effect]

@@ -1,5 +1,5 @@
 from enum import StrEnum
-from typing import Dict, List
+from typing import Dict
 
 
 class PermissionEffect(StrEnum):
@@ -38,4 +38,3 @@ class PermissionEffect(StrEnum):
         if precedence[self] < precedence[other]:
             return True
         return False
-

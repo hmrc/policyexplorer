@@ -1,4 +1,3 @@
-
 # For a start add support for string and arn operators
 
 string_condition_operators = dict(
@@ -7,7 +6,7 @@ string_condition_operators = dict(
     StringEqualsIgnoreCase="Exact matching, ignoring case",
     StringNotEqualsIgnoreCase="Negated matching, ignoring case",
     StringLike="Case-sensitive matching. The values can include multi-character match wildcards (*) and single-character match wildcards (?) anywhere in the string. You must specify wildcards to achieve partial string matches.",
-    StringNotLike="Negated case-sensitive matching. The values can include multi-character match wildcards (*) or single-character match wildcards (?) anywhere in the string."
+    StringNotLike="Negated case-sensitive matching. The values can include multi-character match wildcards (*) or single-character match wildcards (?) anywhere in the string.",
 )
 
 # If a key contains multiple values, StringLike can be qualified with set operators—ForAllValues:StringLike and ForAnyValue:StringLike. For more information, see Multivalued context keys.
@@ -22,7 +21,6 @@ arn_condition_operator = dict(
 )
 
 
-
 numeric_condition_operators = dict(
     NumericEquals="Matching",
     NumericNotEquals="Negated matching",
@@ -33,7 +31,7 @@ numeric_condition_operators = dict(
 )
 
 
-date_condition_operators=dict(
+date_condition_operators = dict(
     DateEquals="Matching a specific date",
     DateNotEquals="Negated matching",
     DateLessThan="Matching before a specific date and time",
@@ -42,9 +40,7 @@ date_condition_operators=dict(
     DateGreaterThanEquals="Matching at or after a specific date and time",
 )
 
-boolean_condition_operator = dict(
-    Bool="Boolean matching"
-)
+boolean_condition_operator = dict(Bool="Boolean matching")
 # works with the following context keys:
 #   * aws:SecureTransport
 #   * aws:PrincipalIsAWSService

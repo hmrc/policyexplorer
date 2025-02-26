@@ -47,7 +47,7 @@ from policyexplorer.principal import Principal
             Principal("P2", [], []),
             False,
         ),
-    ]
+    ],
 )
 def test_principal_match(pattern: Principal, subject: Principal, expected: bool) -> None:
     assert pattern.match(subject=subject) is expected

@@ -1,4 +1,3 @@
-from typing import Any, Dict, List
 import pytest
 
 from policyexplorer.exception import RequestContextItemNotFoundException
@@ -6,91 +5,50 @@ from policyexplorer.permission import PermissionEffect
 from policyexplorer.permission_table import PermissionTable
 from policyexplorer.principal import Principal
 from policyexplorer.request_context import RequestContext, RequestContextItem
-from policyexplorer.statement import Statement
 
 
 @pytest.mark.parametrize(
     "perm_table,other_table,expected",
     [
         (
-            PermissionTable(
-                table={}
-            ),
-            PermissionTable(
-                table={"*": {"*:*-*": PermissionEffect.ALLOW}}
-            ),
-            PermissionTable(
-                table={"*": {"*:*-*": PermissionEffect.ALLOW}}
-            ),
+            PermissionTable(table={}),
+            PermissionTable(table={"*": {"*:*-*": PermissionEffect.ALLOW}}),
+            PermissionTable(table={"*": {"*:*-*": PermissionEffect.ALLOW}}),
         ),
         (
-            PermissionTable(
-                table={"P1": {"A1-R1": PermissionEffect.ALLOW}}
-            ),
-            PermissionTable(
-                table={"P1": {"A2-R1": PermissionEffect.ALLOW}}
-            ),
-            PermissionTable(
-                table={
-                    "P1": {"A1-R1": "Allow", "A2-R1": PermissionEffect.ALLOW}
-                }
-            ),
+            PermissionTable(table={"P1": {"A1-R1": PermissionEffect.ALLOW}}),
+            PermissionTable(table={"P1": {"A2-R1": PermissionEffect.ALLOW}}),
+            PermissionTable(table={"P1": {"A1-R1": "Allow", "A2-R1": PermissionEffect.ALLOW}}),
         ),
         (
-            PermissionTable(
-                table={"P1": {"A1-R1": PermissionEffect.ALLOW}}
-            ),
-            PermissionTable(
-                table={"P1": {"A1-R1": PermissionEffect.DENY}}
-            ),
-            PermissionTable(
-                table={
-                    "P1": {"A1-R1": PermissionEffect.DENY}
-                }
-            ),
+            PermissionTable(table={"P1": {"A1-R1": PermissionEffect.ALLOW}}),
+            PermissionTable(table={"P1": {"A1-R1": PermissionEffect.DENY}}),
+            PermissionTable(table={"P1": {"A1-R1": PermissionEffect.DENY}}),
         ),
         (
-            PermissionTable(
-                table={"P1": {"A1-R1": PermissionEffect.ALLOW}}
-            ),
-            PermissionTable(
-                table={"P1": {"A1-R1": PermissionEffect.IMPLICIT_DENY}}
-            ),
-            PermissionTable(
-                table={
-                    "P1": {"A1-R1": PermissionEffect.ALLOW}
-                }
-            ),
+            PermissionTable(table={"P1": {"A1-R1": PermissionEffect.ALLOW}}),
+            PermissionTable(table={"P1": {"A1-R1": PermissionEffect.IMPLICIT_DENY}}),
+            PermissionTable(table={"P1": {"A1-R1": PermissionEffect.ALLOW}}),
         ),
         (
-            PermissionTable(
-                table={"P1": {"A1-R1": PermissionEffect.DENY}}
-            ),
-            PermissionTable(
-                table={"P1": {"A1-R1": PermissionEffect.IMPLICIT_DENY}}
-            ),
-            PermissionTable(
-                table={
-                    "P1": {"A1-R1": PermissionEffect.DENY}
-                }
-            ),
+            PermissionTable(table={"P1": {"A1-R1": PermissionEffect.DENY}}),
+            PermissionTable(table={"P1": {"A1-R1": PermissionEffect.IMPLICIT_DENY}}),
+            PermissionTable(table={"P1": {"A1-R1": PermissionEffect.DENY}}),
         ),
-    ]
+    ],
 )
-def test_permission_table_merge(perm_table: PermissionTable, other_table: PermissionTable, expected: PermissionTable) -> None:
+def test_permission_table_merge(
+    perm_table: PermissionTable, other_table: PermissionTable, expected: PermissionTable
+) -> None:
     perm_table.merge(other=other_table) == expected.table
     assert perm_table.table == expected.table
-    
+
 
 @pytest.mark.parametrize(
     "permission_table,principal,action,expected",
     [
         (
-            PermissionTable(
-                table={
-                    Principal("*", [], []): {"*:*-*": PermissionEffect.ALLOW}
-                }
-            ),
+            PermissionTable(table={Principal("*", [], []): {"*:*-*": PermissionEffect.ALLOW}}),
             Principal("john.doe", [], []),
             "ec2:RunInstances",
             True,
@@ -144,7 +102,9 @@ def test_permission_table_merge(perm_table: PermissionTable, other_table: Permis
             PermissionTable(
                 table={
                     Principal("*", [], []): {"kms:*-*": PermissionEffect.ALLOW},
-                    Principal("arn:aws:iam::123456789012:role/RoleAdmin", [], []): {"kms:*-*": PermissionEffect.IMPLICIT_DENY},
+                    Principal("arn:aws:iam::123456789012:role/RoleAdmin", [], []): {
+                        "kms:*-*": PermissionEffect.IMPLICIT_DENY
+                    },
                 }
             ),
             Principal("arn:aws:iam::123456789012:role/RoleAdmin", [], []),
@@ -155,7 +115,9 @@ def test_permission_table_merge(perm_table: PermissionTable, other_table: Permis
             PermissionTable(
                 table={
                     Principal("*", [], []): {"ec2:*-*": PermissionEffect.DENY},
-                    Principal("arn:aws:iam::123456789012:role/RoleAdmin", [], []): {"ec2:*-*": PermissionEffect.IMPLICIT_DENY},
+                    Principal("arn:aws:iam::123456789012:role/RoleAdmin", [], []): {
+                        "ec2:*-*": PermissionEffect.IMPLICIT_DENY
+                    },
                 }
             ),
             Principal("arn:aws:iam::123456789012:role/RoleAdmin", [], []),
@@ -166,7 +128,9 @@ def test_permission_table_merge(perm_table: PermissionTable, other_table: Permis
             PermissionTable(
                 table={
                     Principal("*", [], []): {"ec2:*-*": PermissionEffect.DENY},
-                    Principal("arn:aws:iam::123456789012:role/RoleEngineer", [], []): {"ec2:*-*": PermissionEffect.DENY},
+                    Principal("arn:aws:iam::123456789012:role/RoleEngineer", [], []): {
+                        "ec2:*-*": PermissionEffect.DENY
+                    },
                 }
             ),
             Principal("arn:aws:iam::123456789012:role/RoleEngineer", [], []),
@@ -176,8 +140,12 @@ def test_permission_table_merge(perm_table: PermissionTable, other_table: Permis
         (
             PermissionTable(
                 table={
-                    Principal(identifier="*", excludes=[], only=[]): {"kms:ScheduleKeyDeletion-*": PermissionEffect.DENY},
-                    Principal("arn:aws:iam::123456789012:role/RoleEngineer", [], []): {"kms:ScheduleKeyDeletion-*": PermissionEffect.ALLOW},
+                    Principal(identifier="*", excludes=[], only=[]): {
+                        "kms:ScheduleKeyDeletion-*": PermissionEffect.DENY
+                    },
+                    Principal("arn:aws:iam::123456789012:role/RoleEngineer", [], []): {
+                        "kms:ScheduleKeyDeletion-*": PermissionEffect.ALLOW
+                    },
                 }
             ),
             Principal("arn:aws:iam::123456789012:role/RoleEngineer", [], []),
@@ -187,8 +155,14 @@ def test_permission_table_merge(perm_table: PermissionTable, other_table: Permis
         (
             PermissionTable(
                 table={
-                    Principal(identifier="*", excludes=[Principal("arn:aws:iam::123456789012:role/RoleEngineer", [], [])], only=[]): {"kms:ScheduleKeyDeletion-*": PermissionEffect.DENY},
-                    Principal("arn:aws:iam::123456789012:role/RoleEngineer", [], []): {"kms:ScheduleKeyDeletion-*": PermissionEffect.ALLOW},
+                    Principal(
+                        identifier="*",
+                        excludes=[Principal("arn:aws:iam::123456789012:role/RoleEngineer", [], [])],
+                        only=[],
+                    ): {"kms:ScheduleKeyDeletion-*": PermissionEffect.DENY},
+                    Principal("arn:aws:iam::123456789012:role/RoleEngineer", [], []): {
+                        "kms:ScheduleKeyDeletion-*": PermissionEffect.ALLOW
+                    },
                 }
             ),
             Principal("arn:aws:iam::123456789012:role/RoleEngineer", [], []),
@@ -198,7 +172,11 @@ def test_permission_table_merge(perm_table: PermissionTable, other_table: Permis
         (
             PermissionTable(
                 table={
-                    Principal(identifier="*", excludes=[Principal("arn:aws:iam::123456789012:role/RoleAdmin", [], [])], only=[]): {
+                    Principal(
+                        identifier="*",
+                        excludes=[Principal("arn:aws:iam::123456789012:role/RoleAdmin", [], [])],
+                        only=[],
+                    ): {
                         "s3:PutObject*-arn:aws:s3:::bucketA": PermissionEffect.DENY,
                         "s3:ListMultipartUploadParts-arn:aws:s3:::bucketA": PermissionEffect.DENY,
                         "s3:DeleteObject*-arn:aws:s3:::bucketA": PermissionEffect.DENY,
@@ -220,23 +198,25 @@ def test_permission_table_merge(perm_table: PermissionTable, other_table: Permis
             "s3:PutObject",
             True,
         ),
-    ]
+    ],
 )
-def test_permission_table_is_principal_allowed_action(permission_table: PermissionTable, principal: str, action: str, expected: bool) -> None:
+def test_permission_table_is_principal_allowed_action(
+    permission_table: PermissionTable, principal: str, action: str, expected: bool
+) -> None:
     assert permission_table.is_principal_allowed_action(principal=principal, action=action) == expected
 
 
 @pytest.mark.parametrize(
     "string,expected",
     [
-        ( "*abcde", True),
-        ( "abc*de", True),
-        ( "abcde*", True),
-        ( "?abcef", True),
-        ( "abc?ef", True),
-        ( "abcef?", True),
-        ( "abcef", False),
-    ]
+        ("*abcde", True),
+        ("abc*de", True),
+        ("abcde*", True),
+        ("?abcef", True),
+        ("abc?ef", True),
+        ("abcef?", True),
+        ("abcef", False),
+    ],
 )
 def test_has_wildcard(string: str, expected: str) -> None:
     PermissionTable.has_wildcard(string=string) == expected
@@ -269,7 +249,7 @@ def test_has_wildcard(string: str, expected: str) -> None:
                     "Resource": RequestContextItem(key="Resource", value="R1"),
                 }
             ),
-            True
+            True,
         ),
         (
             PermissionTable(
@@ -295,7 +275,7 @@ def test_has_wildcard(string: str, expected: str) -> None:
                     "Resource": RequestContextItem(key="Resource", value="R2"),
                 }
             ),
-            True
+            True,
         ),
         (
             PermissionTable(
@@ -321,7 +301,7 @@ def test_has_wildcard(string: str, expected: str) -> None:
                     "Resource": RequestContextItem(key="Resource", value="R1"),
                 }
             ),
-            False
+            False,
         ),
         (
             PermissionTable(
@@ -347,22 +327,20 @@ def test_has_wildcard(string: str, expected: str) -> None:
                     "Resource": RequestContextItem(key="Resource", value="RX"),
                 }
             ),
-            False
+            False,
         ),
         (
-            PermissionTable(
-                table={
-                    Principal("*", [], []): {"*:*-*": PermissionEffect.ALLOW}
-                }
-            ),
+            PermissionTable(table={Principal("*", [], []): {"*:*-*": PermissionEffect.ALLOW}}),
             RequestContext(
                 items={
-                    "aws:PrincipalArn": RequestContextItem(key="aws:PrincipalArn", value="arn:aws:iam::123456789012:role/RoleAdmin"),
+                    "aws:PrincipalArn": RequestContextItem(
+                        key="aws:PrincipalArn", value="arn:aws:iam::123456789012:role/RoleAdmin"
+                    ),
                     "Action": RequestContextItem(key="Action", value="s3:CreateBucket"),
                     "Resource": RequestContextItem(key="Resource", value="arn:aws:s3:::bucketA"),
                 }
             ),
-            True
+            True,
         ),
         (
             PermissionTable(
@@ -375,12 +353,16 @@ def test_has_wildcard(string: str, expected: str) -> None:
             ),
             RequestContext(
                 items={
-                    "aws:PrincipalArn": RequestContextItem(key="aws:PrincipalArn", value="arn:aws:iam::123456789012:role/RoleAdmin"),
+                    "aws:PrincipalArn": RequestContextItem(
+                        key="aws:PrincipalArn", value="arn:aws:iam::123456789012:role/RoleAdmin"
+                    ),
                     "Action": RequestContextItem(key="Action", value="ec2:RunInstances"),
-                    "Resource": RequestContextItem(key="Resource", value="arn:aws:ec2:eu-west-2:123456789012:instance/i-5203422c"),
+                    "Resource": RequestContextItem(
+                        key="Resource", value="arn:aws:ec2:eu-west-2:123456789012:instance/i-5203422c"
+                    ),
                 }
             ),
-            True
+            True,
         ),
         (
             PermissionTable(
@@ -393,16 +375,20 @@ def test_has_wildcard(string: str, expected: str) -> None:
             ),
             RequestContext(
                 items={
-                    "aws:PrincipalArn": RequestContextItem(key="aws:PrincipalArn", value="arn:aws:iam::123456789012:role/RoleEngineer"),
+                    "aws:PrincipalArn": RequestContextItem(
+                        key="aws:PrincipalArn", value="arn:aws:iam::123456789012:role/RoleEngineer"
+                    ),
                     "Action": RequestContextItem(key="Action", value="s3:DeleteBucket"),
                     "Resource": RequestContextItem(key="Resource", value="arn:aws:s3:::bucketA"),
                 }
             ),
-            True
+            True,
         ),
-    ]
+    ],
 )
-def test_is_matched_by_permission_table(permission_table: PermissionTable, request_context: RequestContext, expected: bool) -> None:
+def test_is_matched_by_permission_table(
+    permission_table: PermissionTable, request_context: RequestContext, expected: bool
+) -> None:
     assert permission_table.match(request_context=request_context) == expected
 
 
@@ -410,11 +396,7 @@ def test_is_matched_by_permission_table(permission_table: PermissionTable, reque
     "permission_table,request_context,missing_context_key",
     [
         (
-            PermissionTable(
-                table={
-                    Principal("*", [], []): {"*:*-*": PermissionEffect.ALLOW}
-                }
-            ),
+            PermissionTable(table={Principal("*", [], []): {"*:*-*": PermissionEffect.ALLOW}}),
             RequestContext(
                 items={
                     "Action": RequestContextItem(key="Action", value="s3:CreateBucket"),
@@ -424,37 +406,35 @@ def test_is_matched_by_permission_table(permission_table: PermissionTable, reque
             "aws:PrincipalArn",
         ),
         (
-            PermissionTable(
-                table={
-                    Principal("*", [], []): {"*:*-*": PermissionEffect.ALLOW}
-                }
-            ),
+            PermissionTable(table={Principal("*", [], []): {"*:*-*": PermissionEffect.ALLOW}}),
             RequestContext(
                 items={
-                    "aws:PrincipalArn": RequestContextItem(key="aws:PrincipalArn", value="arn:aws:iam::123456789012:role/RoleEngineer"),
+                    "aws:PrincipalArn": RequestContextItem(
+                        key="aws:PrincipalArn", value="arn:aws:iam::123456789012:role/RoleEngineer"
+                    ),
                     "Resource": RequestContextItem(key="Resource", value="arn:aws:s3:::bucketA"),
                 }
             ),
             "Action",
         ),
         (
-            PermissionTable(
-                table={
-                    Principal("*", [], []): {"*:*-*": PermissionEffect.ALLOW}
-                }
-            ),
+            PermissionTable(table={Principal("*", [], []): {"*:*-*": PermissionEffect.ALLOW}}),
             RequestContext(
                 items={
-                    "aws:PrincipalArn": RequestContextItem(key="aws:PrincipalArn", value="arn:aws:iam::123456789012:role/RoleEngineer"),
+                    "aws:PrincipalArn": RequestContextItem(
+                        key="aws:PrincipalArn", value="arn:aws:iam::123456789012:role/RoleEngineer"
+                    ),
                     "Action": RequestContextItem(key="Action", value="s3:CreateBucket"),
                 }
             ),
             "Resource",
         ),
-    ]
+    ],
 )
-def test_is_matched_by_permission_table_missing_request_context_item(permission_table: PermissionTable, request_context: RequestContext, missing_context_key: str) -> None:
-    with pytest.raises(RequestContextItemNotFoundException, match=f"request context item not found - {missing_context_key}"):
+def test_is_matched_by_permission_table_missing_request_context_item(
+    permission_table: PermissionTable, request_context: RequestContext, missing_context_key: str
+) -> None:
+    with pytest.raises(
+        RequestContextItemNotFoundException, match=f"request context item not found - {missing_context_key}"
+    ):
         permission_table.match(request_context=request_context)
-
-

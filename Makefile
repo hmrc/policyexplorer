@@ -12,7 +12,7 @@ OS = macos
 endif
 
 PYTHON_VERSION = $(shell head -1 .python-version)
-PYTHON_SRC = *.py policyexplorer/ tests/
+PYTHON_SRC = policyexplorer/ tests/
 
 POETRY_DOCKER = docker run \
 	--interactive \
@@ -44,7 +44,7 @@ lint: python
 	@$(POETRY_DOCKER) ruff check $(PYTHON_SRC)
 
 fmt-check: python
-	@$(POETRY_DOCKER_MOUNT) ruff format --check --line-length 120 --exclude=tests/custom_checks/utils.py $(PYTHON_SRC)
+	@$(POETRY_DOCKER_MOUNT) ruff format --check --line-length 120 $(PYTHON_SRC)
 
 fmt: python
 	@$(POETRY_DOCKER_MOUNT) ruff check --fix $(PYTHON_SRC)

@@ -1,15 +1,11 @@
 from dataclasses import dataclass
 from typing import Any, Dict, List, Set
 
-from policyexplorer.common import matches_pattern
-from policyexplorer.permission import PermissionEffect
 from policyexplorer.permission_table import PermissionTable
-from policyexplorer.principal import Principal
-from policyexplorer.statement import Effect, Statement
+from policyexplorer.statement import Statement
 
 
 class Policy:
-
     def __init__(self, raw: Dict[str, Any]):
         self._policy = raw
         self.statement = self._statement()
@@ -27,7 +23,6 @@ class Policy:
         for st in self.statement:
             table.merge(other=st.permission_table)
         return table
-
 
     # Given an action, get principals that are allowed the action
     def allowed_principals(self, action: str) -> Set[str]:

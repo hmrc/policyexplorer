@@ -20,7 +20,7 @@ from policyexplorer.common import matches_pattern
         ("arn:aws:s3:::demo-bucket/*/test/*", "arn:aws:s3:::demo-bucket/project/test/file.png", True),
         ("*:*", "s3:CreateBucket", True),
         ("s3:*", "s3:CreateBucket", True),
-    ]
+    ],
 )
 def test_matches_pattern(pattern: str, input: str, expected: bool) -> None:
     assert matches_pattern(pattern=pattern, string=input) == expected

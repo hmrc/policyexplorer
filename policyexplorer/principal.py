@@ -30,5 +30,5 @@ class Principal:
             for p in self.excludes:
                 if matches_pattern(pattern=p.identifier, string=subject.identifier):
                     return False
-        
+
         return _match

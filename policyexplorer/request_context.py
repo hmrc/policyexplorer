@@ -1,4 +1,3 @@
-
 from dataclasses import dataclass
 from typing import Dict
 
@@ -6,7 +5,7 @@ from typing import Dict
 @dataclass
 class RequestContextItem:
     key: str
-    value: str # extend with List[str] to support multivalued context key values
+    value: str  # extend with List[str] to support multivalued context key values
 
 
 @dataclass
@@ -15,4 +14,3 @@ class RequestContext:
 
     def get_item_by_key(self, key: str) -> RequestContextItem | None:
         return self.items.get(key, None)
-

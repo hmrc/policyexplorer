@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 import re
-from typing import Any, Dict, List
+from typing import Dict
 
 from policyexplorer.common import matches_pattern
 from policyexplorer.exception import RequestContextItemNotFoundException
@@ -16,10 +16,9 @@ class PermissionTable:
     def __eq__(self, other: "PermissionTable") -> bool:
         """Overrides the default implementation"""
         if isinstance(other, PermissionTable):
-            l = [other.table.get(k) and other.table.get(k) == v for k, v in self.table.items()]
-            return len(l) > 0 and all(l)
+            results = [other.table.get(k) and other.table.get(k) == v for k, v in self.table.items()]
+            return len(results) > 0 and all(results)
         return False
-
 
     def merge(self, other: "PermissionTable") -> None:
         for pk, value in other.table.items():
@@ -57,13 +56,15 @@ class PermissionTable:
                     if matches_pattern(pattern=new_ark, string=action_resource):
                         permissions.append(effect)
 
-        return len(permissions) > 0 and PermissionEffect.ALLOW in permissions and PermissionEffect.DENY not in permissions
+        return (
+            len(permissions) > 0 and PermissionEffect.ALLOW in permissions and PermissionEffect.DENY not in permissions
+        )
 
     def match(self, request_context: RequestContext) -> bool:
         # Note: [Assumption] The following request context keys are assumed
         print(f"\n\n{ self.table = }")
 
-        _principal = request_context.get_item_by_key("aws:PrincipalArn") # Consider service ARN too?
+        _principal = request_context.get_item_by_key("aws:PrincipalArn")  # Consider service ARN too?
         if not _principal:
             raise RequestContextItemNotFoundException("request context item not found - aws:PrincipalArn")
         principal = Principal(_principal.value, [], [])
@@ -75,7 +76,6 @@ class PermissionTable:
         resource = request_context.get_item_by_key("Resource")
         if not resource:
             raise RequestContextItemNotFoundException("request context item not found - Resource")
-
 
         action_resource_key = f"{action.value}-{resource.value}"
 

@@ -1,17 +1,14 @@
-from typing import List
 import pytest
 
 from policyexplorer.permission import PermissionEffect
-from policyexplorer.permission_table import PermissionTable
-from policyexplorer.principal import Principal
 
 
 @pytest.mark.parametrize(
     "effect,expected",
     [
-        ( PermissionEffect.ALLOW, PermissionEffect.IMPLICIT_DENY),
-        ( PermissionEffect.DENY, PermissionEffect.IMPLICIT_DENY),
-    ]
+        (PermissionEffect.ALLOW, PermissionEffect.IMPLICIT_DENY),
+        (PermissionEffect.DENY, PermissionEffect.IMPLICIT_DENY),
+    ],
 )
 def test_permission_effect_invert(effect: PermissionEffect, expected: PermissionEffect) -> None:
     assert effect.invert == expected
@@ -20,10 +17,10 @@ def test_permission_effect_invert(effect: PermissionEffect, expected: Permission
 @pytest.mark.parametrize(
     "effect,precendence",
     [
-        ( PermissionEffect.IMPLICIT_DENY, 0),
-        ( PermissionEffect.ALLOW, 1),
-        ( PermissionEffect.DENY, 2),
-    ]
+        (PermissionEffect.IMPLICIT_DENY, 0),
+        (PermissionEffect.ALLOW, 1),
+        (PermissionEffect.DENY, 2),
+    ],
 )
 def test_permission_effect_precedence(effect: PermissionEffect, precendence: int) -> None:
     assert PermissionEffect.precedence()[effect] == precendence
@@ -32,13 +29,13 @@ def test_permission_effect_precedence(effect: PermissionEffect, precendence: int
 @pytest.mark.parametrize(
     "this,other,expected",
     [
-        ( PermissionEffect.IMPLICIT_DENY, PermissionEffect.ALLOW, False),
-        ( PermissionEffect.IMPLICIT_DENY, PermissionEffect.DENY, False),
-        ( PermissionEffect.ALLOW, PermissionEffect.DENY, False),
-        ( PermissionEffect.ALLOW, PermissionEffect.IMPLICIT_DENY, True),
-        ( PermissionEffect.DENY, PermissionEffect.ALLOW, True),
-        ( PermissionEffect.DENY, PermissionEffect.IMPLICIT_DENY, True),
-    ]
+        (PermissionEffect.IMPLICIT_DENY, PermissionEffect.ALLOW, False),
+        (PermissionEffect.IMPLICIT_DENY, PermissionEffect.DENY, False),
+        (PermissionEffect.ALLOW, PermissionEffect.DENY, False),
+        (PermissionEffect.ALLOW, PermissionEffect.IMPLICIT_DENY, True),
+        (PermissionEffect.DENY, PermissionEffect.ALLOW, True),
+        (PermissionEffect.DENY, PermissionEffect.IMPLICIT_DENY, True),
+    ],
 )
 def test_permission_effect_greater_than(this: PermissionEffect, other: PermissionEffect, expected: bool) -> None:
     assert (this > other) == expected
@@ -47,13 +44,13 @@ def test_permission_effect_greater_than(this: PermissionEffect, other: Permissio
 @pytest.mark.parametrize(
     "this,other,expected",
     [
-        ( PermissionEffect.IMPLICIT_DENY, PermissionEffect.ALLOW, True),
-        ( PermissionEffect.IMPLICIT_DENY, PermissionEffect.DENY, True),
-        ( PermissionEffect.ALLOW, PermissionEffect.DENY, True),
-        ( PermissionEffect.ALLOW, PermissionEffect.IMPLICIT_DENY, False),
-        ( PermissionEffect.DENY, PermissionEffect.ALLOW, False),
-        ( PermissionEffect.DENY, PermissionEffect.IMPLICIT_DENY, False),
-    ]
+        (PermissionEffect.IMPLICIT_DENY, PermissionEffect.ALLOW, True),
+        (PermissionEffect.IMPLICIT_DENY, PermissionEffect.DENY, True),
+        (PermissionEffect.ALLOW, PermissionEffect.DENY, True),
+        (PermissionEffect.ALLOW, PermissionEffect.IMPLICIT_DENY, False),
+        (PermissionEffect.DENY, PermissionEffect.ALLOW, False),
+        (PermissionEffect.DENY, PermissionEffect.IMPLICIT_DENY, False),
+    ],
 )
 def test_permission_effect_less_than(this: PermissionEffect, other: PermissionEffect, expected: bool) -> None:
     assert (this < other) == expected
