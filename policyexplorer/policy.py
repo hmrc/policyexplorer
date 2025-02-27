@@ -38,7 +38,6 @@ class Policy:
 
         return principals
 
-    # TODO: is this method really useful?
     # Given a principal, determine allow permissions it has
     def principal_allow_permissions(self, principal: Principal) -> Set[Permission]:
         if not self.permission_table.table.get(principal):
