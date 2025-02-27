@@ -9,6 +9,9 @@ class Permission:
     action: str
     resource: str
 
+    def __hash__(self):
+        return hash((self.action, self.resource))
+
     @staticmethod
     def from_string(permission_string: str) -> "Permission":
         action, resource = re.match("(.*:.*)-(.*)", permission_string).groups()

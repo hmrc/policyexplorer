@@ -1,7 +1,7 @@
-from typing import Any, Dict, List, NamedTuple
+from typing import Any, Dict, List, NamedTuple, Set
 import pytest
 
-from policyexplorer.permission import PermissionEffect
+from policyexplorer.permission import Permission, PermissionEffect
 from policyexplorer.permission_table import PermissionTable
 from policyexplorer.policy import Policy
 from policyexplorer.principal import Principal
@@ -678,3 +678,112 @@ def test_policy_allowed_principals_by_resource(
 def test_policy_allowed_principals(policy: Dict[str, Any], action: str, principals: List[str]) -> None:
     p = Policy(raw=policy)
     assert p.allowed_principals(action=action) == principals
+
+
+@pytest.mark.parametrize(
+    "policy,principal,permissions",
+    [
+        (
+            dict(
+                Version="2012-10-17",
+                Statement=[
+                    dict(
+                        Effect="Allow",
+                        Principal="arn:aws:iam::123456789012:role/RoleAdmin",
+                        Action=["ec2:*", "s3:*", "kms:*"],
+                        Resource="*",
+                    ),
+                ],
+            ),
+            Principal("arn:aws:iam::123456789012:role/RoleEngineer", [], []),
+            set(),
+        ),
+        (
+            dict(
+                Version="2012-10-17",
+                Statement=[
+                    dict(
+                        Effect="Deny",
+                        Principal="*",
+                        Action="kms:ScheduleKeyDeletion",
+                        Resource="*",
+                        Condition={"StringNotEquals": {"aws:PrincipalArn": "arn:aws:iam::123456789012:role/RoleAdmin"}},
+                    ),
+                ],
+            ),
+            Principal("arn:aws:iam::123456789012:role/RoleAdmin", [], []),
+            set(),
+        ),
+        (
+            dict(
+                Version="2012-10-17",
+                Statement=[
+                    dict(
+                        Effect="Allow",
+                        Principal="arn:aws:iam::123456789012:role/RoleAdmin",
+                        Action=["ec2:*", "s3:*", "kms:*"],
+                        Resource="*",
+                    ),
+                    dict(
+                        Effect="Deny",
+                        Principal="*",
+                        Action="kms:ScheduleKeyDeletion",
+                        Resource="*",
+                        Condition={"StringNotEquals": {"aws:PrincipalArn": "arn:aws:iam::123456789012:role/RoleAdmin"}},
+                    ),
+                ],
+            ),
+            Principal("arn:aws:iam::123456789012:role/RoleAdmin", [], []),
+            {
+                Permission(action="ec2:*", resource="*"),
+                Permission(action="s3:*", resource="*"),
+                Permission(action="kms:*", resource="*"),
+            },
+        ),
+        (
+            dict(
+                Version="2012-10-17",
+                Statement=[
+                    dict(
+                        Effect="Deny",
+                        Principal="*",
+                        Action=["s3:Get*", "s3:List*", "s3:PutObject*"],
+                        Resource="arn:aws:s3:::bucketA/*",
+                        Condition={
+                            "ArnNotLike": {
+                                "aws:PrincipalArn": [
+                                    "arn:aws:iam::123456789012:role/RoleAdmin",
+                                    "arn:aws:iam::123456789012:role/RoleEngineer",
+                                ],
+                            }
+                        },
+                    ),
+                    dict(
+                        Effect="Allow",
+                        Principal="*",
+                        Action="s3:*",
+                        Resource=["arn:aws:s3:::bucketA", "arn:aws:s3:::bucketA/*"],
+                        Condition={
+                            "ArnLike": {
+                                "aws:PrincipalArn": [
+                                    "arn:aws:iam::123456789012:role/RoleAdmin",
+                                    "arn:aws:iam::123456789012:role/RoleEngineer",
+                                ],
+                            }
+                        },
+                    ),
+                ],
+            ),
+            Principal("arn:aws:iam::123456789012:role/RoleAdmin", [], []),
+            {
+                Permission(action="s3:*", resource="arn:aws:s3:::bucketA"),
+                Permission(action="s3:*", resource="arn:aws:s3:::bucketA/*"),
+            },
+        ),
+    ],
+)
+def test_policy_principal_allow_permissions(
+    policy: Dict[str, Any], principal: Principal, permissions: Set[Permission]
+) -> None:
+    p = Policy(raw=policy)
+    assert p.principal_allow_permissions(principal=principal) == permissions

@@ -4,7 +4,6 @@ from typing import List
 from policyexplorer.common import matches_pattern
 
 
-# @dataclass(eq=True, repr=True)
 @dataclass
 class Principal:
     identifier: str

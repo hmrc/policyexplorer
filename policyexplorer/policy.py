@@ -38,13 +38,14 @@ class Policy:
 
         return principals
 
-    # Given a principal, determine permissions it has
-    def principal_permissions(self, principal: Principal) -> List[Permission]:
+    # TODO: is this method really useful?
+    # Given a principal, determine allow permissions it has
+    def principal_allow_permissions(self, principal: Principal) -> Set[Permission]:
         if not self.permission_table.table.get(principal):
             return set()
 
         return {
             Permission.from_string(action_resource)
-            for action_resource, effect in self.permission_table.table[principal]
+            for action_resource, effect in self.permission_table.table[principal].items()
             if effect == PermissionEffect.ALLOW
         }
