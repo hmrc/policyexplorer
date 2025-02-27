@@ -101,5 +101,5 @@ def test_evaluate_condition_item(
         (ConditionItem(operator="IpAddress", key="aws:SourceIp", value=["203.0.113.0/24"]), []),
     ],
 )
-def test_condition_item_get_principals(condition_item: ConditionItem, principals: List[str]) -> None:
+def test_condition_item_get_principals(condition_item: ConditionItem, principals: List[Principal]) -> None:
     assert condition_item.get_principals() == principals

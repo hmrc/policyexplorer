@@ -9,12 +9,15 @@ class Permission:
     action: str
     resource: str
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash((self.action, self.resource))
 
     @staticmethod
     def from_string(permission_string: str) -> "Permission":
-        action, resource = re.match("(.*:.*)-(.*)", permission_string).groups()
+        action, resource = "", ""
+        match = re.match("(.*:.*)-(.*)", permission_string)
+        if match:
+            action, resource = match.groups()
         return Permission(action=action, resource=resource)
 
 
@@ -23,7 +26,7 @@ class PermissionEffect(StrEnum):
     DENY = "ExplicitDeny"
     IMPLICIT_DENY = "ImplicitDeny"
 
-    def __init__(self, effect: str):
+    def __init__(self, effect: "PermissionEffect"):
         self.effect = effect
 
     @property
@@ -34,23 +37,21 @@ class PermissionEffect(StrEnum):
         }[self.effect]
 
     @staticmethod
-    def precedence() -> Dict[int, str]:
+    def precedence() -> Dict["PermissionEffect", int]:
         return {
             PermissionEffect.IMPLICIT_DENY: 0,
             PermissionEffect.ALLOW: 1,
             PermissionEffect.DENY: 2,
         }
 
-    def __gt__(self, other: "PermissionEffect") -> bool:
+    def __gt__(self, other: "PermissionEffect") -> bool:  # type: ignore[override]
         precedence = self.precedence()
-
         if precedence[self] > precedence[other]:
             return True
         return False
 
-    def __lt__(self, other: "PermissionEffect") -> bool:
+    def __lt__(self, other: "PermissionEffect") -> bool:  # type: ignore[override]
         precedence = self.precedence()
-
         if precedence[self] < precedence[other]:
             return True
         return False

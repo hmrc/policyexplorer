@@ -17,7 +17,7 @@ class Policy:
         return [Statement(raw=s) for s in self._policy.get("Statement", [])]
 
     def _version(self) -> str:
-        return self._policy.get("Version", "")
+        return str(self._policy.get("Version", ""))
 
     def _permission_table(self) -> PermissionTable:
         table = PermissionTable(table={})
@@ -26,11 +26,11 @@ class Policy:
         return table
 
     # Given an action, get principals that are allowed the action
-    def allowed_principals(self, action: str) -> Set[str]:
+    def allowed_principals(self, action: str) -> Set[Principal]:
         return self.allowed_principals_by_resource(action=action, resource="*")
 
     # Given an action and a resource, get principals that are allowed the action on the resource
-    def allowed_principals_by_resource(self, action: str, resource: str) -> List[str]:
+    def allowed_principals_by_resource(self, action: str, resource: str) -> Set[Principal]:
         principals = set()
         for principal, _ in self.permission_table.table.items():
             if self.permission_table.is_principal_allowed_action(principal=principal, action=action, resource=resource):

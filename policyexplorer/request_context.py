@@ -1,11 +1,11 @@
 from dataclasses import dataclass
-from typing import Dict
+from typing import Dict, List
 
 
 @dataclass
 class RequestContextItem:
     key: str
-    value: str  # extend with List[str] to support multivalued context key values
+    value: bool | str | List[str]
 
 
 @dataclass

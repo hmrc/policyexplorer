@@ -20,10 +20,10 @@ class Statement:
         self.permission_table = self._permission_table()
 
     def _effect(self) -> str:
-        return self._statement.get("Effect")
+        return str(self._statement["Effect"])
 
     def _principal(self) -> List[Principal]:
-        principal_raw = self._statement.get("Principal")
+        principal_raw = self._statement["Principal"]
         if isinstance(principal_raw, dict):
             # Intentionally overlooking the type of principal
             principals = [
@@ -35,11 +35,11 @@ class Statement:
             principals = [Principal(identifier=principal_raw, excludes=[], only=[])]
         return principals
 
-    def _action(self) -> str:
-        return ensure_array(self._statement.get("Action"))
+    def _action(self) -> List[str]:
+        return ensure_array(self._statement["Action"])
 
-    def _resource(self) -> str:
-        return ensure_array(self._statement.get("Resource"))
+    def _resource(self) -> List[str]:
+        return ensure_array(self._statement["Resource"])
 
     def _condition(self) -> Condition:
         return Condition(raw=self._statement.get("Condition", {}))
@@ -54,7 +54,7 @@ class Statement:
     #   * NotResource
 
     def _permission_table(self) -> PermissionTable:
-        table = {}
+        table: Dict[Principal, Dict[str, PermissionEffect]] = {}
 
         _principals = []
 

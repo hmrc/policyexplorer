@@ -12,22 +12,30 @@ from policyexplorer.request_context import RequestContext, RequestContextItem
     [
         (
             PermissionTable(table={}),
-            PermissionTable(table={"*": {"*:*-*": PermissionEffect.ALLOW}}),
+            PermissionTable(table={Principal("*", [], []): {"*:*-*": PermissionEffect.ALLOW}}),
             False,
         ),
         (
-            PermissionTable(table={"P1": {"A1-R1": PermissionEffect.ALLOW, "A2-R1": PermissionEffect.ALLOW}}),
-            PermissionTable(table={"P1": {"A1-R1": PermissionEffect.ALLOW, "A2-R1": PermissionEffect.ALLOW}}),
+            PermissionTable(
+                table={Principal("P1", [], []): {"A1-R1": PermissionEffect.ALLOW, "A2-R1": PermissionEffect.ALLOW}}
+            ),
+            PermissionTable(
+                table={Principal("P1", [], []): {"A1-R1": PermissionEffect.ALLOW, "A2-R1": PermissionEffect.ALLOW}}
+            ),
             True,
         ),
         (
-            PermissionTable(table={"P1": {"A1-R1": PermissionEffect.ALLOW, "A2-R1": PermissionEffect.ALLOW}}),
-            PermissionTable(table={"P2": {"A1-R1": PermissionEffect.ALLOW, "A2-R1": PermissionEffect.ALLOW}}),
+            PermissionTable(
+                table={Principal("P1", [], []): {"A1-R1": PermissionEffect.ALLOW, "A2-R1": PermissionEffect.ALLOW}}
+            ),
+            PermissionTable(
+                table={Principal("P2", [], []): {"A1-R1": PermissionEffect.ALLOW, "A2-R1": PermissionEffect.ALLOW}}
+            ),
             False,
         ),
         (
             "",
-            PermissionTable(table={"P1": {"A1-R1": PermissionEffect.ALLOW}}),
+            PermissionTable(table={Principal("P1", [], []): {"A1-R1": PermissionEffect.ALLOW}}),
             False,
         ),
     ],
@@ -43,35 +51,37 @@ def test_permission_table_equality(
     [
         (
             PermissionTable(table={}),
-            PermissionTable(table={"*": {"*:*-*": PermissionEffect.ALLOW}}),
-            PermissionTable(table={"*": {"*:*-*": PermissionEffect.ALLOW}}),
+            PermissionTable(table={Principal("*", [], []): {"*:*-*": PermissionEffect.ALLOW}}),
+            PermissionTable(table={Principal("*", [], []): {"*:*-*": PermissionEffect.ALLOW}}),
         ),
         (
-            PermissionTable(table={"P1": {"A1-R1": PermissionEffect.ALLOW}}),
-            PermissionTable(table={"P1": {"A2-R1": PermissionEffect.ALLOW}}),
-            PermissionTable(table={"P1": {"A1-R1": "Allow", "A2-R1": PermissionEffect.ALLOW}}),
+            PermissionTable(table={Principal("P1", [], []): {"A1-R1": PermissionEffect.ALLOW}}),
+            PermissionTable(table={Principal("P1", [], []): {"A2-R1": PermissionEffect.ALLOW}}),
+            PermissionTable(
+                table={Principal("P1", [], []): {"A1-R1": PermissionEffect.ALLOW, "A2-R1": PermissionEffect.ALLOW}}
+            ),
         ),
         (
-            PermissionTable(table={"P1": {"A1-R1": PermissionEffect.ALLOW}}),
-            PermissionTable(table={"P1": {"A1-R1": PermissionEffect.DENY}}),
-            PermissionTable(table={"P1": {"A1-R1": PermissionEffect.DENY}}),
+            PermissionTable(table={Principal("P1", [], []): {"A1-R1": PermissionEffect.ALLOW}}),
+            PermissionTable(table={Principal("P1", [], []): {"A1-R1": PermissionEffect.DENY}}),
+            PermissionTable(table={Principal("P1", [], []): {"A1-R1": PermissionEffect.DENY}}),
         ),
         (
-            PermissionTable(table={"P1": {"A1-R1": PermissionEffect.ALLOW}}),
-            PermissionTable(table={"P1": {"A1-R1": PermissionEffect.IMPLICIT_DENY}}),
-            PermissionTable(table={"P1": {"A1-R1": PermissionEffect.ALLOW}}),
+            PermissionTable(table={Principal("P1", [], []): {"A1-R1": PermissionEffect.ALLOW}}),
+            PermissionTable(table={Principal("P1", [], []): {"A1-R1": PermissionEffect.IMPLICIT_DENY}}),
+            PermissionTable(table={Principal("P1", [], []): {"A1-R1": PermissionEffect.ALLOW}}),
         ),
         (
-            PermissionTable(table={"P1": {"A1-R1": PermissionEffect.DENY}}),
-            PermissionTable(table={"P1": {"A1-R1": PermissionEffect.IMPLICIT_DENY}}),
-            PermissionTable(table={"P1": {"A1-R1": PermissionEffect.DENY}}),
+            PermissionTable(table={Principal("P1", [], []): {"A1-R1": PermissionEffect.DENY}}),
+            PermissionTable(table={Principal("P1", [], []): {"A1-R1": PermissionEffect.IMPLICIT_DENY}}),
+            PermissionTable(table={Principal("P1", [], []): {"A1-R1": PermissionEffect.DENY}}),
         ),
     ],
 )
 def test_permission_table_merge(
     perm_table: PermissionTable, other_table: PermissionTable, expected: PermissionTable
 ) -> None:
-    perm_table.merge(other=other_table) == expected.table
+    perm_table.merge(other=other_table)
     assert perm_table.table == expected.table
 
 
@@ -232,7 +242,7 @@ def test_permission_table_merge(
     ],
 )
 def test_permission_table_is_principal_allowed_action(
-    permission_table: PermissionTable, principal: str, action: str, expected: bool
+    permission_table: PermissionTable, principal: Principal, action: str, expected: bool
 ) -> None:
     assert permission_table.is_principal_allowed_action(principal=principal, action=action) == expected
 
@@ -249,7 +259,7 @@ def test_permission_table_is_principal_allowed_action(
         ("abcef", False),
     ],
 )
-def test_has_wildcard(string: str, expected: str) -> None:
+def test_has_wildcard(string: str, expected: bool) -> None:
     PermissionTable.has_wildcard(string=string) == expected
 
 

@@ -11,7 +11,7 @@ from policyexplorer.request_context import RequestContext
 class ConditionItem:
     operator: str
     key: str
-    value: List[str] | bool
+    value: bool | List[str]
 
     def is_operator_negated(self) -> bool:
         return "Not" in self.operator
@@ -31,7 +31,7 @@ class ConditionItem:
         if isinstance(self.value, bool):
             result = self.value == request_context_item.value
         else:
-            result = any([matches_pattern(pattern=v, string=request_context_item.value) for v in self.value])
+            result = any([matches_pattern(pattern=v, string=str(request_context_item.value)) for v in self.value])
 
         if self.is_operator_negated():
             return not result
@@ -44,7 +44,7 @@ class ConditionItem:
         regex = re.compile(pattern, re.IGNORECASE)
 
         principals = []
-        if regex.match(self.key):
+        if regex.match(self.key) and isinstance(self.value, list):
             principals = [Principal(identifier=v, excludes=[], only=[]) for v in self.value]
 
         return principals

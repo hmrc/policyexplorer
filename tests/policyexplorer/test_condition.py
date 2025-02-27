@@ -201,5 +201,5 @@ def test_evaluate_condition(condition: Condition, request_context: RequestContex
         ),
     ],
 )
-def test_condition_get_principals(condition: Condition, principals: List[str]) -> None:
+def test_condition_get_principals(condition: Condition, principals: List[Principal]) -> None:
     assert condition.get_principals() == principals

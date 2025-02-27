@@ -558,7 +558,7 @@ def test_policy_permission_table(policy: Dict[str, Any], permission_table: Permi
     ],
 )
 def test_policy_allowed_principals_by_resource(
-    policy: Dict[str, Any], action: str, resource: str, principals: List[str]
+    policy: Dict[str, Any], action: str, resource: str, principals: Set[Principal]
 ) -> None:
     p = Policy(raw=policy)
     assert p.allowed_principals_by_resource(action=action, resource=resource) == principals
@@ -675,7 +675,7 @@ def test_policy_allowed_principals_by_resource(
         ),
     ],
 )
-def test_policy_allowed_principals(policy: Dict[str, Any], action: str, principals: List[str]) -> None:
+def test_policy_allowed_principals(policy: Dict[str, Any], action: str, principals: Set[Principal]) -> None:
     p = Policy(raw=policy)
     assert p.allowed_principals(action=action) == principals
 

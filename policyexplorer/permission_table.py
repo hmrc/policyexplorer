@@ -13,8 +13,7 @@ from policyexplorer.request_context import RequestContext
 class PermissionTable:
     table: Dict[Principal, Dict[str, PermissionEffect]]
 
-    def __eq__(self, other: "PermissionTable") -> bool:
-        """Overrides the default implementation"""
+    def __eq__(self, other: object) -> bool:
         if isinstance(other, PermissionTable):
             results = [other.table.get(k) and other.table.get(k) == v for k, v in self.table.items()]
             return len(results) > 0 and all(results)
@@ -46,7 +45,11 @@ class PermissionTable:
         for key, value in self.table.items():
             if key.match(subject=principal):
                 for ark, effect in value.items():
-                    _action, _resource = re.match("(.*:.*)-(.*)", ark).groups()
+                    _action, _resource = "", ""
+
+                    _match = re.match("(.*:.*)-(.*)", ark)
+                    if _match:
+                        _action, _resource = _match.groups()
 
                     if not self.has_wildcard(string=_resource):
                         new_ark = f"{_action}-{resource}"
@@ -62,12 +65,10 @@ class PermissionTable:
 
     def match(self, request_context: RequestContext) -> bool:
         # Note: [Assumption] The following request context keys are assumed
-        print(f"\n\n{ self.table = }")
-
         _principal = request_context.get_item_by_key("aws:PrincipalArn")  # Consider service ARN too?
         if not _principal:
             raise RequestContextItemNotFoundException("request context item not found - aws:PrincipalArn")
-        principal = Principal(_principal.value, [], [])
+        principal = Principal(str(_principal.value), [], [])
 
         action = request_context.get_item_by_key("Action")
         if not action:

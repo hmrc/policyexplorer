@@ -13,7 +13,7 @@ StatementTuple = NamedTuple(
     "StatementTuple",
     [
         ("effect", str),
-        ("principal", List[str]),
+        ("principal", List[Principal]),
         ("action", List[str]),
         ("resource", List[str]),
         ("condition", Condition),
@@ -204,9 +204,9 @@ def test_statement_parsing(statement: Dict[str, Any], statement_tuple: Statement
                         identifier="*",
                         excludes=[Principal("arn:aws:iam::123456789012:role/RoleAdmin", [], [])],
                         only=[],
-                    ): {"kms:*-*": PermissionEffect.ALLOW.value},
+                    ): {"kms:*-*": PermissionEffect.ALLOW},
                     Principal("arn:aws:iam::123456789012:role/RoleAdmin", [], []): {
-                        "kms:*-*": PermissionEffect.IMPLICIT_DENY.value
+                        "kms:*-*": PermissionEffect.IMPLICIT_DENY
                     },
                 }
             ),
