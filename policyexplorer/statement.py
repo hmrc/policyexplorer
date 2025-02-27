@@ -26,7 +26,11 @@ class Statement:
         principal_raw = self._statement.get("Principal")
         if isinstance(principal_raw, dict):
             # Intentionally overlooking the type of principal
-            principals = [Principal(identifier=p, excludes=[], only=[]) for _, values in principal_raw.items() for p in ensure_array(values)]
+            principals = [
+                Principal(identifier=p, excludes=[], only=[])
+                for _, values in principal_raw.items()
+                for p in ensure_array(values)
+            ]
         else:
             principals = [Principal(identifier=principal_raw, excludes=[], only=[])]
         return principals

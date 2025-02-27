@@ -57,13 +57,18 @@ StatementTuple = NamedTuple(
         (
             dict(
                 Effect="Allow",
-                Principal={"AWS": ["arn:aws:iam::123456789012:role/RoleAdmin", "arn:aws:iam::123456789012:role/RoleEngineer"]},
+                Principal={
+                    "AWS": ["arn:aws:iam::123456789012:role/RoleAdmin", "arn:aws:iam::123456789012:role/RoleEngineer"]
+                },
                 Action=["ec2:*", "s3:*"],
                 Resource="*",
             ),
             StatementTuple(
                 effect="Allow",
-                principal=[Principal("arn:aws:iam::123456789012:role/RoleAdmin", [], []), Principal("arn:aws:iam::123456789012:role/RoleEngineer", [], [])],
+                principal=[
+                    Principal("arn:aws:iam::123456789012:role/RoleAdmin", [], []),
+                    Principal("arn:aws:iam::123456789012:role/RoleEngineer", [], []),
+                ],
                 action=["ec2:*", "s3:*"],
                 resource=["*"],
                 condition=Condition(raw={}),
