@@ -42,7 +42,7 @@ StatementTuple = NamedTuple(
         (
             dict(
                 Effect="Allow",
-                Principal="arn:aws:iam::123456789012:role/RoleAdmin",
+                Principal={"AWS": "arn:aws:iam::123456789012:role/RoleAdmin"},
                 Action="*:*",
                 Resource="*",
             ),
@@ -57,13 +57,13 @@ StatementTuple = NamedTuple(
         (
             dict(
                 Effect="Allow",
-                Principal="arn:aws:iam::123456789012:role/RoleAdmin",
+                Principal={"AWS": ["arn:aws:iam::123456789012:role/RoleAdmin", "arn:aws:iam::123456789012:role/RoleEngineer"]},
                 Action=["ec2:*", "s3:*"],
                 Resource="*",
             ),
             StatementTuple(
                 effect="Allow",
-                principal=[Principal("arn:aws:iam::123456789012:role/RoleAdmin", [], [])],
+                principal=[Principal("arn:aws:iam::123456789012:role/RoleAdmin", [], []), Principal("arn:aws:iam::123456789012:role/RoleEngineer", [], [])],
                 action=["ec2:*", "s3:*"],
                 resource=["*"],
                 condition=Condition(raw={}),
@@ -72,7 +72,7 @@ StatementTuple = NamedTuple(
         (
             dict(
                 Effect="Allow",
-                Principal="*",
+                Principal={"AWS": "*"},
                 Action="s3:DeleteBucket",
                 Resource=["arn:aws:s3:::bucketA", "arn:aws:s3:::bucketB"],
             ),
@@ -87,7 +87,7 @@ StatementTuple = NamedTuple(
         (
             dict(
                 Effect="Deny",
-                Principal="*",
+                Principal={"AWS": "*"},
                 Action="kms:ScheduleKeyDeletion",
                 Resource="*",
                 Condition={"StringNotEquals": {"aws:PrincipalArn": "arn:aws:iam::123456789012:role/RoleAdmin"}},
@@ -105,7 +105,7 @@ StatementTuple = NamedTuple(
         (
             dict(
                 Effect="Deny",
-                Principal="*",
+                Principal={"AWS": "*"},
                 Action=["iam:*AccessKey*"],
                 Resource="arn:aws:iam::account-id:user/*",
                 Condition={"NotIpAddress": {"aws:SourceIp": "203.0.113.0/24"}},
@@ -136,7 +136,7 @@ def test_statement_parsing(statement: Dict[str, Any], statement_tuple: Statement
         (
             dict(
                 Effect="Allow",
-                Principal="*",
+                Principal={"AWS": "*"},
                 Action="*:*",
                 Resource="*",
             ),
@@ -145,7 +145,7 @@ def test_statement_parsing(statement: Dict[str, Any], statement_tuple: Statement
         (
             dict(
                 Effect="Allow",
-                Principal="arn:aws:iam::123456789012:role/RoleAdmin",
+                Principal={"AWS": "arn:aws:iam::123456789012:role/RoleAdmin"},
                 Action=["ec2:*", "s3:*"],
                 Resource="*",
             ),
@@ -161,7 +161,7 @@ def test_statement_parsing(statement: Dict[str, Any], statement_tuple: Statement
         (
             dict(
                 Effect="Allow",
-                Principal="arn:aws:iam::123456789012:role/RoleAdmin",
+                Principal={"AWS": "arn:aws:iam::123456789012:role/RoleAdmin"},
                 Action="*:*",
                 Resource="*",
             ),
@@ -172,7 +172,7 @@ def test_statement_parsing(statement: Dict[str, Any], statement_tuple: Statement
         (
             dict(
                 Effect="Allow",
-                Principal="*",
+                Principal={"AWS": "*"},
                 Action="s3:DeleteBucket",
                 Resource=["arn:aws:s3:::bucketA", "arn:aws:s3:::bucketB"],
             ),
@@ -188,7 +188,7 @@ def test_statement_parsing(statement: Dict[str, Any], statement_tuple: Statement
         (
             dict(
                 Effect="Allow",
-                Principal="*",
+                Principal={"AWS": "*"},
                 Action="kms:*",
                 Resource="*",
                 Condition={"StringNotLike": {"aws:PrincipalArn": "arn:aws:iam::123456789012:role/RoleAdmin"}},
@@ -209,7 +209,7 @@ def test_statement_parsing(statement: Dict[str, Any], statement_tuple: Statement
         (
             dict(
                 Effect="Deny",
-                Principal="*",
+                Principal={"AWS": "*"},
                 Action="ec2:*",
                 Resource="*",
                 Condition={"StringNotLike": {"aws:PrincipalArn": "arn:aws:iam::123456789012:role/RoleAdmin"}},
@@ -230,7 +230,7 @@ def test_statement_parsing(statement: Dict[str, Any], statement_tuple: Statement
         (
             dict(
                 Effect="Deny",
-                Principal="*",
+                Principal={"AWS": "*"},
                 Action="ec2:*",
                 Resource="*",
                 Condition={"StringLike": {"aws:PrincipalArn": "arn:aws:iam::123456789012:role/RoleEngineer"}},
@@ -251,7 +251,7 @@ def test_statement_parsing(statement: Dict[str, Any], statement_tuple: Statement
         (
             dict(
                 Effect="Deny",
-                Principal="*",
+                Principal={"AWS": "*"},
                 Action="kms:ScheduleKeyDeletion",
                 Resource="*",
                 Condition={"StringNotLike": {"aws:PrincipalArn": "arn:aws:iam::123456789012:role/RoleEngineer"}},
@@ -272,7 +272,7 @@ def test_statement_parsing(statement: Dict[str, Any], statement_tuple: Statement
         (
             dict(
                 Effect="Deny",
-                Principal="*",
+                Principal={"AWS": "*"},
                 Action=["s3:PutObject*", "s3:ListMultipartUploadParts", "s3:DeleteObject*"],
                 Resource=["arn:aws:s3:::bucketA", "arn:aws:s3:::bucketB"],
                 Condition={
@@ -333,7 +333,7 @@ def test_statement_permission_table(statement: Dict[str, Any], permission_table:
         (
             dict(
                 Effect="Allow",
-                Principal="*",
+                Principal={"AWS": "*"},
                 Action="*:*",
                 Resource="*",
             ),
@@ -351,7 +351,7 @@ def test_statement_permission_table(statement: Dict[str, Any], permission_table:
         (
             dict(
                 Effect="Allow",
-                Principal="arn:aws:iam::123456789012:role/RoleAdmin",
+                Principal={"AWS": "arn:aws:iam::123456789012:role/RoleAdmin"},
                 Action=["ec2:*", "s3:*"],
                 Resource="*",
             ),
@@ -374,7 +374,7 @@ def test_statement_permission_table(statement: Dict[str, Any], permission_table:
         (
             dict(
                 Effect="Allow",
-                Principal="arn:aws:iam::123456789012:role/RoleAdmin",
+                Principal={"AWS": "arn:aws:iam::123456789012:role/RoleAdmin"},
                 Action="*:*",
                 Resource="*",
             ),
@@ -392,7 +392,7 @@ def test_statement_permission_table(statement: Dict[str, Any], permission_table:
         (
             dict(
                 Effect="Allow",
-                Principal="*",
+                Principal={"AWS": "*"},
                 Action="s3:DeleteBucket",
                 Resource=["arn:aws:s3:::bucketA", "arn:aws:s3:::bucketB"],
             ),
@@ -413,7 +413,7 @@ def test_statement_permission_table(statement: Dict[str, Any], permission_table:
         (
             dict(
                 Effect="Allow",
-                Principal="*",
+                Principal={"AWS": "*"},
                 Action="kms:*",
                 Resource="*",
                 Condition={"StringNotLike": {"aws:PrincipalArn": "arn:aws:iam::123456789012:role/RoleAdmin"}},
@@ -437,7 +437,7 @@ def test_statement_permission_table(statement: Dict[str, Any], permission_table:
         (
             dict(
                 Effect="Deny",
-                Principal="*",
+                Principal={"AWS": "*"},
                 Action="ec2:*",
                 Resource="*",
                 Condition={"StringNotLike": {"aws:PrincipalArn": "arn:aws:iam::123456789012:role/RoleAdmin"}},
@@ -461,7 +461,7 @@ def test_statement_permission_table(statement: Dict[str, Any], permission_table:
         (
             dict(
                 Effect="Deny",
-                Principal="*",
+                Principal={"AWS": "*"},
                 Action="ec2:*",
                 Resource="*",
                 Condition={"StringLike": {"aws:PrincipalArn": "arn:aws:iam::123456789012:role/RoleAdmin"}},
@@ -485,7 +485,7 @@ def test_statement_permission_table(statement: Dict[str, Any], permission_table:
         (
             dict(
                 Effect="Deny",
-                Principal="*",
+                Principal={"AWS": "*"},
                 Action="kms:ScheduleKeyDeletion",
                 Resource="*",
                 Condition={"StringNotLike": {"aws:PrincipalArn": "arn:aws:iam::123456789012:role/RoleAdmin"}},
@@ -506,7 +506,7 @@ def test_statement_permission_table(statement: Dict[str, Any], permission_table:
         (
             dict(
                 Effect="Deny",
-                Principal="*",
+                Principal={"AWS": "*"},
                 Action=["s3:PutObject*", "s3:ListMultipartUploadParts", "s3:DeleteObject*"],
                 Resource=["arn:aws:s3:::bucketA", "arn:aws:s3:::bucketB"],
                 Condition={
@@ -532,7 +532,7 @@ def test_statement_permission_table(statement: Dict[str, Any], permission_table:
         (
             dict(
                 Effect="Deny",
-                Principal="*",
+                Principal={"AWS": "*"},
                 Action="kms:ScheduleKeyDeletion",
                 Resource="*",
                 Condition={"StringNotLike": {"aws:PrincipalArn": "arn:aws:iam::123456789012:role/RoleAdmin"}},

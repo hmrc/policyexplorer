@@ -23,8 +23,13 @@ class Statement:
         return self._statement.get("Effect")
 
     def _principal(self) -> List[Principal]:
-        principals = ensure_array(self._statement.get("Principal"))
-        return [Principal(identifier=p, excludes=[], only=[]) for p in principals]
+        principal_raw = self._statement.get("Principal")
+        if isinstance(principal_raw, dict):
+            # Intentionally overlooking the type of principal
+            principals = [Principal(identifier=p, excludes=[], only=[]) for _, values in principal_raw.items() for p in ensure_array(values)]
+        else:
+            principals = [Principal(identifier=principal_raw, excludes=[], only=[])]
+        return principals
 
     def _action(self) -> str:
         return ensure_array(self._statement.get("Action"))
@@ -35,19 +40,11 @@ class Statement:
     def _condition(self) -> Condition:
         return Condition(raw=self._statement.get("Condition", {}))
 
-    # def _inverse_effect(self) -> str:
-    #     return {
-    #         Effect.ALLOW: Effect.DENY,
-    #         Effect.DENY: Effect.ALLOW,
-    #     }[self.effect]
-
     # TODO:
     #   Add support for:
     #       * NotAction
-    #       * 'Principal: { AWS: "*"}' format
-    #   Question: Can 'Principal' field have multiple principal types e.g. AWS, Service?
 
-    # consider other elements of IAM Policy statement:
+    # Consider other elements of IAM Policy statement:
     #   * NotPrincipal
     #   * NotAction
     #   * NotResource
@@ -55,7 +52,7 @@ class Statement:
     def _permission_table(self) -> PermissionTable:
         table = {}
 
-        _principals = []  # From statement Principal element, generate fully formed Principal object (i.e. excludes/only field fully populated) to be used as keys in the table
+        _principals = []
 
         for p in self.principal:
             if self.condition:
