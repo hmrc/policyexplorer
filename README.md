@@ -1,7 +1,6 @@
-
 # policyexplorer
 
-This is a placeholder README.md for a new repository
+A tool to parse an IAM policy document.
 
 ### License
 
