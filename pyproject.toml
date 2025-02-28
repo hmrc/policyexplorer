@@ -1,7 +1,7 @@
 [project]
 name = "policyexplorer"
 version = "0.1.0"
-description = ""
+description = "An AWS IAM policy document parser"
 authors = [
     {name = "Your Name",email = "you@example.com"}
 ]
@@ -9,7 +9,14 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
 ]
+license = { text = "Apache-2.0" }
+keywords = [ "aws", "iam", "parser" ]
 
+[project.urls]
+homepage = "https://github.com/hmrc/policyexplorer"
+repository = "https://github.com/hmrc/policyexplorer"
+documentation = "https://github.com/hmrc/policyexplorer"
+"Bug Tracker" = "https://github.com/hmrc/policyexplorer/issues"
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
@@ -21,4 +28,3 @@ pytest-cov = "^6.0.0"
 ruff = "^0.9.6"
 mypy = "^1.15.0"
 bandit = "^1.8.3"
-
