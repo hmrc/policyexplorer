@@ -52,17 +52,13 @@ class Statement:
     def _condition(self) -> Condition:
         return Condition(raw=self._statement.get("Condition", {}))
 
-    def _validate(self) -> bool:
+    def _validate(self) -> None:
         if len(self.action) == 0 and len(self.not_action) == 0:
             raise StatmentElementNotFoundException("Statement must include either an Action or NotAction element")
 
     # TODO:
-    #   Add support for:
-    #       * NotAction
-
     # Consider other elements of IAM Policy statement:
     #   * NotPrincipal
-    #   * NotAction
     #   * NotResource
 
     def _permission_table(self) -> PermissionTable:
