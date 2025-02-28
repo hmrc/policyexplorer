@@ -3,6 +3,7 @@ from typing import Any, Dict, List
 from policyexplorer.common import ensure_array
 from policyexplorer.condition import Condition
 from policyexplorer.effect import Effect
+from policyexplorer.exception import StatmentElementNotFoundException
 from policyexplorer.permission import PermissionEffect
 from policyexplorer.permission_table import PermissionTable
 from policyexplorer.principal import Principal
@@ -15,8 +16,10 @@ class Statement:
         self.effect = self._effect()
         self.principal = self._principal()
         self.action = self._action()
+        self.not_action = self._not_action()
         self.resource = self._resource()
         self.condition = self._condition()
+        self._validate()
         self.permission_table = self._permission_table()
 
     def _effect(self) -> str:
@@ -36,13 +39,22 @@ class Statement:
         return principals
 
     def _action(self) -> List[str]:
-        return ensure_array(self._statement["Action"])
+        return ensure_array(self._statement.get("Action", []))
+
+    def _not_action(self) -> List[str]:
+        if self._statement.get("Action"):
+            return []
+        return ensure_array(self._statement.get("NotAction", []))
 
     def _resource(self) -> List[str]:
         return ensure_array(self._statement["Resource"])
 
     def _condition(self) -> Condition:
         return Condition(raw=self._statement.get("Condition", {}))
+
+    def _validate(self) -> bool:
+        if len(self.action) == 0 and len(self.not_action) == 0:
+            raise StatmentElementNotFoundException("Statement must include either an Action or NotAction element")
 
     # TODO:
     #   Add support for:
@@ -57,6 +69,14 @@ class Statement:
         table: Dict[Principal, Dict[str, PermissionEffect]] = {}
 
         _principals = []
+
+        _effect = PermissionEffect[self.effect.upper()]
+        if self.not_action:
+            _effect = PermissionEffect[self.effect.upper()].invert
+
+        _actions = self.action
+        if self.not_action:
+            _actions = self.not_action
 
         for p in self.principal:
             if self.condition:
@@ -73,19 +93,19 @@ class Statement:
             if not table.get(p):
                 table[p] = {}
 
-            for a in self.action:
+            for a in _actions:
                 for r in self.resource:
                     action_resource_key = f"{a}-{r}"
-                    table[p][action_resource_key] = PermissionEffect[self.effect.upper()]
+                    table[p][action_resource_key] = _effect
                     if self.condition:
                         for condition_item in self.condition.items:
                             for cp in condition_item.get_principals():
                                 if not table.get(cp):
                                     table[cp] = {}
                                 if condition_item.is_operator_negated():
-                                    table[cp][action_resource_key] = PermissionEffect[self.effect.upper()].invert
+                                    table[cp][action_resource_key] = _effect.invert
                                 else:
-                                    table[cp][action_resource_key] = PermissionEffect[self.effect.upper()]
+                                    table[cp][action_resource_key] = _effect
 
         return PermissionTable(table=table)
 

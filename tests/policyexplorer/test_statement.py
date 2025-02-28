@@ -3,6 +3,7 @@ import pytest
 
 from policyexplorer.condition import Condition
 from policyexplorer.effect import Effect
+from policyexplorer.exception import StatmentElementNotFoundException
 from policyexplorer.permission import PermissionEffect
 from policyexplorer.permission_table import PermissionTable
 from policyexplorer.principal import Principal
@@ -15,6 +16,7 @@ StatementTuple = NamedTuple(
         ("effect", str),
         ("principal", List[Principal]),
         ("action", List[str]),
+        ("not_action", List[str]),
         ("resource", List[str]),
         ("condition", Condition),
     ],
@@ -35,6 +37,7 @@ StatementTuple = NamedTuple(
                 effect="Allow",
                 principal=[Principal("*", [], [])],
                 action=["*:*"],
+                not_action=[],
                 resource=["*"],
                 condition=Condition(raw={}),
             ),
@@ -50,6 +53,7 @@ StatementTuple = NamedTuple(
                 effect="Allow",
                 principal=[Principal("arn:aws:iam::123456789012:role/RoleAdmin", [], [])],
                 action=["*:*"],
+                not_action=[],
                 resource=["*"],
                 condition=Condition(raw={}),
             ),
@@ -70,6 +74,7 @@ StatementTuple = NamedTuple(
                     Principal("arn:aws:iam::123456789012:role/RoleEngineer", [], []),
                 ],
                 action=["ec2:*", "s3:*"],
+                not_action=[],
                 resource=["*"],
                 condition=Condition(raw={}),
             ),
@@ -85,6 +90,7 @@ StatementTuple = NamedTuple(
                 effect="Allow",
                 principal=[Principal("*", [], [])],
                 action=["s3:DeleteBucket"],
+                not_action=[],
                 resource=["arn:aws:s3:::bucketA", "arn:aws:s3:::bucketB"],
                 condition=Condition(raw={}),
             ),
@@ -101,6 +107,7 @@ StatementTuple = NamedTuple(
                 effect="Deny",
                 principal=[Principal("*", [Principal("arn:aws:iam::123456789012:role/RoleAdmin", [], [])], [])],
                 action=["kms:ScheduleKeyDeletion"],
+                not_action=[],
                 resource=["*"],
                 condition=Condition(
                     raw={"StringNotEquals": {"aws:PrincipalArn": "arn:aws:iam::123456789012:role/RoleAdmin"}}
@@ -119,20 +126,49 @@ StatementTuple = NamedTuple(
                 effect="Deny",
                 principal=[Principal("*", [], [])],
                 action=["iam:*AccessKey*"],
+                not_action=[],
                 resource=["arn:aws:iam::account-id:user/*"],
                 condition=Condition(raw={"NotIpAddress": {"aws:SourceIp": "203.0.113.0/24"}}),
+            ),
+        ),
+        (
+            dict(
+                Effect="Allow",
+                Principal="*",
+                NotAction="*:*",
+                Resource="*",
+            ),
+            StatementTuple(
+                effect="Allow",
+                principal=[Principal("*", [], [])],
+                action=[],
+                not_action=["*:*"],
+                resource=["*"],
+                condition=Condition(raw={}),
             ),
         ),
     ],
 )
 def test_statement_parsing(statement: Dict[str, Any], statement_tuple: StatementTuple) -> None:
     st = Statement(raw=statement)
-
     assert st.effect == statement_tuple.effect
     assert st.principal == statement_tuple.principal
     assert st.action == statement_tuple.action
+    assert st.not_action == statement_tuple.not_action
     assert st.resource == statement_tuple.resource
     assert st.condition._condition == statement_tuple.condition._condition
+
+
+def test_statement_validate() -> None:
+    statement = dict(
+        Effect="Allow",
+        Principal="*",
+        Resource="*",
+    )
+    with pytest.raises(
+        StatmentElementNotFoundException, match="Statement must include either an Action or NotAction element"
+    ):
+        Statement(raw=statement)._validate()
 
 
 @pytest.mark.parametrize(
@@ -306,6 +342,27 @@ def test_statement_parsing(statement: Dict[str, Any], statement_tuple: Statement
                         "s3:PutObject*-arn:aws:s3:::bucketB": PermissionEffect.IMPLICIT_DENY,
                         "s3:ListMultipartUploadParts-arn:aws:s3:::bucketB": PermissionEffect.IMPLICIT_DENY,
                         "s3:DeleteObject*-arn:aws:s3:::bucketB": PermissionEffect.IMPLICIT_DENY,
+                    },
+                }
+            ),
+        ),
+        (
+            dict(
+                Effect="Deny",
+                Principal={"AWS": "*"},
+                NotAction=["kms:Put*"],
+                Resource="*",
+                Condition={"StringNotLike": {"aws:PrincipalArn": "arn:aws:iam::123456789012:role/RoleEngineer"}},
+            ),
+            PermissionTable(
+                table={
+                    Principal(
+                        identifier="*",
+                        excludes=[Principal("arn:aws:iam::123456789012:role/RoleEngineer", [], [])],
+                        only=[],
+                    ): {"kms:Put*-*": PermissionEffect.IMPLICIT_DENY},
+                    Principal("arn:aws:iam::123456789012:role/RoleEngineer", [], []): {
+                        "kms:Put*-*": PermissionEffect.IMPLICIT_DENY
                     },
                 }
             ),

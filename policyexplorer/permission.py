@@ -32,6 +32,7 @@ class PermissionEffect(StrEnum):
     @property
     def invert(self) -> "PermissionEffect":
         return {
+            PermissionEffect.IMPLICIT_DENY: PermissionEffect.IMPLICIT_DENY,
             PermissionEffect.ALLOW: PermissionEffect.IMPLICIT_DENY,
             PermissionEffect.DENY: PermissionEffect.IMPLICIT_DENY,
         }[self.effect]
