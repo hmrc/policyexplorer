@@ -1,0 +1,164 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Sid": "DenyAccessToDecrypt",
+        "Effect": "Deny",
+        "Principal": {
+          "AWS": "*"
+        },
+        "Action": "kms:Decrypt",
+        "Resource": "*",
+        "Condition": {
+          "StringNotLike": {
+            "aws:Service": "access-analyzer.amazonaws.com",
+            "aws:PrincipalArn": [
+              "arn:aws:iam::111122223333:role/app-lambda-role",
+              "arn:aws:iam::111122223333:role/RoleAppAdmin",
+              "arn:aws:iam::111122223333:role/RoleAppEngineer"
+            ]
+          }
+        }
+      },
+      {
+        "Sid": "DenyAccessToNonWriteUsers",
+        "Effect": "Deny",
+        "Principal": {
+          "AWS": "*"
+        },
+        "Action": [
+          "kms:ReEncrypt*",
+          "kms:GenerateDataKey*",
+          "kms:Encrypt"
+        ],
+        "Resource": "*",
+        "Condition": {
+          "StringNotLike": {
+            "aws:Service": [],
+            "aws:PrincipalArn": "arn:aws:iam::111122223333:role/app-lambda-role"
+          }
+        }
+      },
+      {
+        "Sid": "DenyAccessToNonKMSAdmin",
+        "Effect": "Deny",
+        "Principal": {
+          "AWS": "*"
+        },
+        "Action": [
+          "kms:Update*",
+          "kms:UntagResource",
+          "kms:TagResource",
+          "kms:ScheduleKeyDeletion",
+          "kms:Revoke*",
+          "kms:Put*",
+          "kms:Enable*",
+          "kms:Disable*",
+          "kms:Delete*",
+          "kms:Create*",
+          "kms:CancelKeyDeletion"
+        ],
+        "Resource": "*",
+        "Condition": {
+          "StringNotEquals": {
+            "aws:PrincipalArn": "arn:aws:iam::111122223333:role/RoleTerraformProvisioner"
+          }
+        }
+      },
+      {
+        "Sid": "DenyGetAccessToNonKMSAdmin",
+        "Effect": "Deny",
+        "Principal": {
+          "AWS": "*"
+        },
+        "Action": [
+          "kms:GetPublicKey",
+          "kms:GetParametersForImport"
+        ],
+        "Resource": "*",
+        "Condition": {
+          "StringNotEquals": {
+            "aws:PrincipalArn": "arn:aws:iam::111122223333:role/RoleTerraformProvisioner"
+          }
+        }
+      },
+      {
+        "Sid": "DenyAccessToNonKMSAdminAndDescribeRoles",
+        "Effect": "Deny",
+        "Principal": {
+          "AWS": "*"
+        },
+        "Action": [
+          "kms:List*",
+          "kms:GetKeyRotationStatus",
+          "kms:GetKeyPolicy",
+          "kms:Describe*"
+        ],
+        "Resource": "*",
+        "Condition": {
+          "StringNotEquals": {
+            "aws:PrincipalArn": [
+              "arn:aws:iam::111122223333:role/RoleAppAdmin",
+              "arn:aws:iam::111122223333:role/RoleAppEngineer",
+              "arn:aws:iam::111122223333:role/RoleTerraformProvisioner",
+              "arn:aws:iam::111122223333:role/aws-service-role/guardduty.amazonaws.com/AWSServiceRoleForAmazonGuardDuty",
+              "arn:aws:iam::111122223333:role/app-lambda-role"
+            ]
+          }
+        }
+      },
+      {
+        "Sid": "DenyUnknownKMSActions",
+        "Effect": "Deny",
+        "Principal": {
+          "AWS": "*"
+        },
+        "NotAction": [
+          "kms:Update*",
+          "kms:UntagResource",
+          "kms:TagResource",
+          "kms:ScheduleKeyDeletion",
+          "kms:Revoke*",
+          "kms:ReEncrypt*",
+          "kms:Put*",
+          "kms:List*",
+          "kms:Get*",
+          "kms:GenerateDataKey*",
+          "kms:Encrypt",
+          "kms:Enable*",
+          "kms:Disable*",
+          "kms:Describe*",
+          "kms:Delete*",
+          "kms:Decrypt",
+          "kms:Create*",
+          "kms:CancelKeyDeletion"
+        ],
+        "Resource": "*",
+        "Condition": {
+          "StringNotEquals": {
+            "aws:PrincipalArn": "arn:aws:iam::111122223333:role/RoleTerraformProvisioner"
+          }
+        }
+      },
+      {
+        "Sid": "AllowAccessForUsers",
+        "Effect": "Allow",
+        "Principal": {
+          "AWS": "*"
+        },
+        "Action": "kms:*",
+        "Resource": "*",
+        "Condition": {
+          "StringLike": {
+            "aws:PrincipalArn": [
+              "arn:aws:iam::111122223333:role/RoleAppAdmin",
+              "arn:aws:iam::111122223333:role/RoleAppEngineer",
+              "arn:aws:iam::111122223333:role/RoleTerraformProvisioner",
+              "arn:aws:iam::111122223333:role/aws-service-role/guardduty.amazonaws.com/AWSServiceRoleForAmazonGuardDuty",
+              "arn:aws:iam::111122223333:role/app-lambda-role"
+            ]
+          }
+        }
+      }
+    ]
+  }
