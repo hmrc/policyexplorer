@@ -13,10 +13,10 @@ from policyexplorer.policy import Policy
         ("kms:GetKeyRotationStatus", "arn:aws:iam::111122223333:role/RoleAppAdmin"),
         ("kms:DescribeKey", "arn:aws:iam::111122223333:role/RoleAppEngineer"),
         ("kms:GenerateDataKeyPair", "arn:aws:iam::111122223333:role/app-lambda-role"),
-    ]
+    ],
 )
 def test_kms_cmk_policy(action: str, principal: str) -> None:
-    json_file =pathlib.Path(__file__).parent.joinpath("resources/kms-cmk-resource-policy.json")
+    json_file = pathlib.Path(__file__).parent.joinpath("resources/kms-cmk-resource-policy.json")
     with open(json_file) as f:
         raw = json.load(f)
 
