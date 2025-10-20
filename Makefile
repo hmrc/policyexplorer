@@ -66,7 +66,7 @@ python-test: python
 		--no-cov-on-fail \
 		--cov-fail-under=100
 
-test: python-test lint fmt-check mypy bandit md-check
+test: md-check lint fmt-check bandit python-test mypy
 
 ci: test
 
