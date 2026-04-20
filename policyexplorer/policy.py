@@ -29,13 +29,9 @@ class Policy:
     def allowed_principals(self, action: str) -> Set[Principal]:
         principals = set()
 
-        resources = self.get_all_resources()
-
-        if not resources:
-            resources = {"*"}
-
-        for resource in resources:
-            principals.update(self.allowed_principals_by_resource(action=action, resource=resource))
+        for principal in self.permission_table.table.keys():
+            if self.permission_table.is_principal_allowed_action(principal=principal, action=action, resource="*"):
+                principals.add(principal)
 
         return principals
 
