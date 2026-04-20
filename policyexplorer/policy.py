@@ -27,7 +27,12 @@ class Policy:
 
     # Given an action, get principals that are allowed the action
     def allowed_principals(self, action: str) -> Set[Principal]:
-        return self.allowed_principals_by_resource(action=action, resource="*")
+        principals = set()
+        for principal in self.permission_table.table.keys():
+            if self.permission_table.is_principal_allowed_action(principal=principal, action=action, resource="*"):
+                principals.add(principal)
+
+        return principals
 
     # Given an action and a resource, get principals that are allowed the action on the resource
     def allowed_principals_by_resource(self, action: str, resource: str) -> Set[Principal]:
