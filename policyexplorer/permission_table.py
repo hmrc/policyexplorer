@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-import re
 from typing import Dict
 
 from policyexplorer.common import matches_pattern
@@ -45,19 +44,15 @@ class PermissionTable:
         for key, value in self.table.items():
             if key.match(subject=principal):
                 for ark, effect in value.items():
-                    _action, _resource = "", ""
-
-                    _match = re.match("(.*:.*)-(.*)", ark)
-                    if _match:
-                        _action, _resource = _match.groups()
-
-                    if not self.has_wildcard(string=_resource):
-                        new_ark = f"{_action}-{resource}"
+                    action_resource = f"{action}-{resource}"
+                    if resource == "*":
+                        if "-" in ark:
+                            ark_action = ark.split("-", 1)[0]
+                            if matches_pattern(pattern=ark_action, string=action):
+                                permissions.append(effect)
                     else:
-                        new_ark = ark
-
-                    if matches_pattern(pattern=new_ark, string=action_resource):
-                        permissions.append(effect)
+                        if matches_pattern(pattern=ark, string=action_resource):
+                            permissions.append(effect)
 
         return (
             len(permissions) > 0 and PermissionEffect.ALLOW in permissions and PermissionEffect.DENY not in permissions
