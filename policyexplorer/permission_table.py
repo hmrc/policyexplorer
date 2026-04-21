@@ -44,7 +44,6 @@ class PermissionTable:
         for key, value in self.table.items():
             if key.match(subject=principal):
                 for ark, effect in value.items():
-                    action_resource = f"{action}-{resource}"
                     if resource == "*":
                         if "-" in ark:
                             ark_action = ark.split("-", 1)[0]
